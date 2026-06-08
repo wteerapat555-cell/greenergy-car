@@ -8,12 +8,14 @@ import toast from "react-hot-toast";
 import Stepper from "@/components/ui/Stepper";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { generateTimeSlots, validatePhone, formatThaiDate } from "@/lib/utils";
+import { useLang, LangToggle, T } from "@/lib/lang";
 import type { Vehicle } from "@/types";
-
-const STEPS = ["เลือกรถ", "วัน-เวลา", "ข้อมูลผู้จอง", "ยืนยัน"];
 
 export default function OutboundBookingPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T.outbound[lang];
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -37,34 +39,34 @@ export default function OutboundBookingPage() {
     fetch("/api/vehicles?available=true")
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => setVehicles(data.vehicles || []))
-      .catch(() => toast.error("โหลดข้อมูลรถไม่สำเร็จ"))
+      .catch(() => toast.error(t.loadError))
       .finally(() => setLoadingVehicles(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function validateStep1() {
-    if (!form.vehicle_id) { setErrors({ vehicle_id: "กรุณาเลือกรถ" }); return false; }
+    if (!form.vehicle_id) { setErrors({ vehicle_id: t.errSelectVehicle }); return false; }
     setErrors({});
     return true;
   }
 
   function validateStep2() {
     const errs: Record<string, string> = {};
-    if (!form.booking_date) errs.booking_date = "กรุณาเลือกวันที่";
-    else if (form.booking_date < today) errs.booking_date = "ไม่สามารถเลือกวันในอดีตได้";
-    if (!form.booking_time) errs.booking_time = "กรุณาเลือกเวลาเริ่มต้น";
-    if (!form.booking_time_end) errs.booking_time_end = "กรุณาเลือกเวลาสิ้นสุด";
-    else if (form.booking_time_end <= form.booking_time)
-      errs.booking_time_end = "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น";
+    if (!form.booking_date) errs.booking_date = t.errDate;
+    else if (form.booking_date < today) errs.booking_date = t.errDatePast;
+    if (!form.booking_time) errs.booking_time = t.errTimeStart;
+    if (!form.booking_time_end) errs.booking_time_end = t.errTimeEnd;
+    else if (form.booking_time_end <= form.booking_time) errs.booking_time_end = t.errTimeEndInvalid;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
   function validateStep3() {
     const errs: Record<string, string> = {};
-    if (!form.booker_name.trim()) errs.booker_name = "กรุณากรอกชื่อ-นามสกุล";
-    if (!form.booker_phone.trim()) errs.booker_phone = "กรุณากรอกเบอร์โทรศัพท์";
-    else if (!validatePhone(form.booker_phone)) errs.booker_phone = "รูปแบบเบอร์โทรไม่ถูกต้อง";
-    if (!form.destination.trim()) errs.destination = "กรุณากรอกชื่อโครงการ/จุดหมาย";
+    if (!form.booker_name.trim()) errs.booker_name = t.errName;
+    if (!form.booker_phone.trim()) errs.booker_phone = t.errPhone;
+    else if (!validatePhone(form.booker_phone)) errs.booker_phone = t.errPhoneInvalid;
+    if (!form.destination.trim()) errs.destination = t.errDest;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -85,59 +87,56 @@ export default function OutboundBookingPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาด");
-      toast.success("จองรถสำเร็จ!");
+      if (!res.ok) throw new Error(data.error || t.toastError);
+      toast.success(t.toastSuccess);
       router.push("/");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "จองรถไม่สำเร็จ กรุณาลองใหม่");
+      toast.error(e instanceof Error ? e.message : t.toastError);
     } finally {
       setLoading(false);
     }
   }
 
   const timeSlots = generateTimeSlots();
-
-  // กรอง end time ให้มากกว่า start time เท่านั้น
   const endTimeSlots = timeSlots.filter((t) => t > form.booking_time);
 
   return (
     <main className="min-h-screen bg-linen px-4 py-8">
       <div className="max-w-lg mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/" className="text-neutral-gray hover:text-forest-green transition-colors">
-            ← กลับ
-          </Link>
-          <h1 className="text-h1 font-semibold text-forest-green">จองรถขาไป</h1>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-neutral-gray hover:text-forest-green transition-colors">{t.back}</Link>
+            <h1 className="text-h1 font-semibold text-forest-green">{t.title}</h1>
+          </div>
+          <LangToggle />
         </div>
 
-        <Stepper steps={STEPS} currentStep={step} />
+        <Stepper steps={[...t.steps]} currentStep={step} />
 
         <div className="card">
-          {/* Step 1: Select Vehicle */}
+          {/* Step 1 */}
           {step === 1 && (
             <div>
-              <h2 className="text-h2 font-semibold mb-4">เลือกรถ</h2>
+              <h2 className="text-h2 font-semibold mb-4">{t.step1Title}</h2>
               {loadingVehicles ? (
                 <div className="flex justify-center py-8"><LoadingSpinner /></div>
               ) : vehicles.length === 0 ? (
-                <p className="text-body text-neutral-gray text-center py-8">ไม่มีรถว่างในขณะนี้</p>
+                <p className="text-body text-neutral-gray text-center py-8">{t.noVehicle}</p>
               ) : (
                 <div className="space-y-3">
                   {vehicles.map((v) => (
                     <button
                       key={v.id}
                       onClick={() => setForm((f) => ({ ...f, vehicle_id: v.id }))}
-                      className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left
-                        ${form.vehicle_id === v.id
-                          ? "border-forest-green bg-forest-green/5"
-                          : "border-neutral-gray hover:border-moss-green"
-                        }`}
+                      className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left ${
+                        form.vehicle_id === v.id ? "border-forest-green bg-forest-green/5" : "border-neutral-gray hover:border-moss-green"
+                      }`}
                     >
                       {v.image_url ? (
                         <Image src={v.image_url} alt={v.license_plate} width={64} height={48} className="rounded object-cover" />
                       ) : (
                         <div className="w-16 h-12 bg-linen rounded flex items-center justify-center">
-                          <span className="text-neutral-gray text-caption">ไม่มีภาพ</span>
+                          <span className="text-neutral-gray text-caption">{t.noImage}</span>
                         </div>
                       )}
                       <span className="text-body font-semibold font-dm-sans">{v.license_plate}</span>
@@ -150,131 +149,95 @@ export default function OutboundBookingPage() {
             </div>
           )}
 
-          {/* Step 2: Date & Time */}
+          {/* Step 2 */}
           {step === 2 && (
             <div>
-              <h2 className="text-h2 font-semibold mb-4">เลือกวันและเวลา</h2>
+              <h2 className="text-h2 font-semibold mb-4">{t.step2Title}</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="label">วันที่</label>
-                  <input
-                    type="date"
-                    className="input-field font-dm-sans"
-                    min={today}
-                    value={form.booking_date}
-                    onChange={(e) => setForm((f) => ({ ...f, booking_date: e.target.value }))}
-                  />
+                  <label className="label">{t.labelDate}</label>
+                  <input type="date" className="input-field font-dm-sans" min={today} value={form.booking_date}
+                    onChange={(e) => setForm((f) => ({ ...f, booking_date: e.target.value }))} />
                   {errors.booking_date && <p className="text-red-600 text-caption mt-1">{errors.booking_date}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">เวลาเริ่มต้น</label>
-                    <select
-                      className="input-field font-dm-sans"
-                      value={form.booking_time}
+                    <label className="label">{t.labelStart}</label>
+                    <select className="input-field font-dm-sans" value={form.booking_time}
                       onChange={(e) => {
                         const newStart = e.target.value;
-                        const newEnd = timeSlots.find((t) => t > newStart) || "";
+                        const newEnd = timeSlots.find((s) => s > newStart) || "";
                         setForm((f) => ({ ...f, booking_time: newStart, booking_time_end: newEnd }));
-                      }}
-                    >
-                      {timeSlots.slice(0, -1).map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+                      }}>
+                      {timeSlots.slice(0, -1).map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                     {errors.booking_time && <p className="text-red-600 text-caption mt-1">{errors.booking_time}</p>}
                   </div>
                   <div>
-                    <label className="label">เวลาสิ้นสุด</label>
-                    <select
-                      className="input-field font-dm-sans"
-                      value={form.booking_time_end}
-                      onChange={(e) => setForm((f) => ({ ...f, booking_time_end: e.target.value }))}
-                    >
-                      {endTimeSlots.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+                    <label className="label">{t.labelEnd}</label>
+                    <select className="input-field font-dm-sans" value={form.booking_time_end}
+                      onChange={(e) => setForm((f) => ({ ...f, booking_time_end: e.target.value }))}>
+                      {endTimeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                     {errors.booking_time_end && <p className="text-red-600 text-caption mt-1">{errors.booking_time_end}</p>}
                   </div>
                 </div>
                 {form.booking_time && form.booking_time_end && (
                   <p className="text-caption text-moss-green bg-forest-green/5 rounded-lg px-3 py-2">
-                    ระยะเวลา: {form.booking_time} – {form.booking_time_end} น.
+                    {t.duration}: {form.booking_time} – {form.booking_time_end}{t.timeUnit ? ` ${t.timeUnit}` : ""}
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Step 3: Booker Info */}
+          {/* Step 3 */}
           {step === 3 && (
             <div>
-              <h2 className="text-h2 font-semibold mb-4">ข้อมูลผู้จอง</h2>
+              <h2 className="text-h2 font-semibold mb-4">{t.step3Title}</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="label">ชื่อ-นามสกุล</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="กรอกชื่อ-นามสกุล"
-                    value={form.booker_name}
-                    onChange={(e) => setForm((f) => ({ ...f, booker_name: e.target.value }))}
-                  />
+                  <label className="label">{t.labelName}</label>
+                  <input type="text" className="input-field" placeholder={t.placeholderName} value={form.booker_name}
+                    onChange={(e) => setForm((f) => ({ ...f, booker_name: e.target.value }))} />
                   {errors.booker_name && <p className="text-red-600 text-caption mt-1">{errors.booker_name}</p>}
                 </div>
                 <div>
-                  <label className="label">เบอร์โทรศัพท์</label>
-                  <input
-                    type="tel"
-                    className="input-field font-dm-sans"
-                    placeholder="0812345678"
-                    value={form.booker_phone}
-                    onChange={(e) => setForm((f) => ({ ...f, booker_phone: e.target.value }))}
-                  />
+                  <label className="label">{t.labelPhone}</label>
+                  <input type="tel" className="input-field font-dm-sans" placeholder="0812345678" value={form.booker_phone}
+                    onChange={(e) => setForm((f) => ({ ...f, booker_phone: e.target.value }))} />
                   {errors.booker_phone && <p className="text-red-600 text-caption mt-1">{errors.booker_phone}</p>}
                 </div>
                 <div>
-                  <label className="label">ชื่อโครงการ / จุดหมาย</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="เช่น โครงการ ABC, ประชุมสำนักงานใหญ่"
-                    value={form.destination}
-                    onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
-                  />
+                  <label className="label">{t.labelDest}</label>
+                  <input type="text" className="input-field" placeholder={t.placeholderDest} value={form.destination}
+                    onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))} />
                   {errors.destination && <p className="text-red-600 text-caption mt-1">{errors.destination}</p>}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 4: Confirm */}
+          {/* Step 4 */}
           {step === 4 && (
             <div>
-              <h2 className="text-h2 font-semibold mb-4">ยืนยันการจอง</h2>
+              <h2 className="text-h2 font-semibold mb-4">{t.step4Title}</h2>
               <div className="space-y-3 bg-linen rounded-lg p-4 mb-6">
                 {selectedVehicle?.image_url && (
-                  <Image
-                    src={selectedVehicle.image_url}
-                    alt={selectedVehicle.license_plate}
-                    width={320} height={200}
-                    className="w-full h-40 object-cover rounded-lg mb-4"
-                  />
+                  <Image src={selectedVehicle.image_url} alt={selectedVehicle.license_plate} width={320} height={200}
+                    className="w-full h-40 object-cover rounded-lg mb-4" />
                 )}
-                <Row label="ทะเบียนรถ" value={selectedVehicle?.license_plate || "-"} mono />
-                <Row label="วันที่" value={formatThaiDate(form.booking_date)} />
-                <Row label="เวลา" value={`${form.booking_time} – ${form.booking_time_end} น.`} mono />
-                <Row label="ชื่อผู้จอง" value={form.booker_name} />
-                <Row label="เบอร์โทรศัพท์" value={form.booker_phone} mono />
-                <Row label="โครงการ / จุดหมาย" value={form.destination} />
+                <Row label={t.rowPlate} value={selectedVehicle?.license_plate || "-"} mono />
+                <Row label={t.rowDate} value={formatThaiDate(form.booking_date)} />
+                <Row label={t.rowTime} value={`${form.booking_time} – ${form.booking_time_end}${t.timeUnit ? ` ${t.timeUnit}` : ""}`} mono />
+                <Row label={t.rowName} value={form.booker_name} />
+                <Row label={t.rowPhone} value={form.booker_phone} mono />
+                <Row label={t.rowDest} value={form.destination} />
               </div>
               <button className="btn-primary w-full" onClick={handleSubmit} disabled={loading}>
                 {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <LoadingSpinner size={20} /> กำลังบันทึก...
-                  </span>
-                ) : "ยืนยันการจอง"}
+                  <span className="flex items-center justify-center gap-2"><LoadingSpinner size={20} /> {t.btnSaving}</span>
+                ) : t.btnConfirm}
               </button>
             </div>
           )}
@@ -282,9 +245,9 @@ export default function OutboundBookingPage() {
           {step < 4 && (
             <div className="flex justify-between mt-6">
               {step > 1 ? (
-                <button className="btn-secondary" onClick={() => setStep((s) => s - 1)}>ย้อนกลับ</button>
+                <button className="btn-secondary" onClick={() => setStep((s) => s - 1)}>{t.btnBack}</button>
               ) : <div />}
-              <button className="btn-primary" onClick={nextStep}>ถัดไป</button>
+              <button className="btn-primary" onClick={nextStep}>{t.btnNext}</button>
             </div>
           )}
         </div>

@@ -7,31 +7,35 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatThaiDate } from "@/lib/utils";
+import { useLang, T } from "@/lib/lang";
 import type { Booking, BookingStatus } from "@/types";
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  pending: "รอยืนยัน",
-  confirmed: "ยืนยันแล้ว",
-  returned: "คืนแล้ว",
-  cancelled: "ยกเลิก",
-};
-
-const STATUS_COLORS: Record<BookingStatus, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-green-100 text-green-800",
-  returned: "bg-blue-100 text-blue-800",
-  cancelled: "bg-red-100 text-red-800",
-};
 
 type FilterType = "today" | "month" | "range";
 
 export default function DashboardPage() {
+  const { lang } = useLang();
+  const t = T.dashboard[lang];
+
+  const STATUS_LABELS: Record<BookingStatus, string> = {
+    pending: t.statusPending,
+    confirmed: t.statusConfirmed,
+    returned: t.statusReturned,
+    cancelled: t.statusCancelled,
+  };
+
+  const STATUS_COLORS: Record<BookingStatus, string> = {
+    pending: "bg-yellow-100 text-yellow-800",
+    confirmed: "bg-green-100 text-green-800",
+    returned: "bg-blue-100 text-blue-800",
+    cancelled: "bg-red-100 text-red-800",
+  };
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("today");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [confirm, setConfirm] = useState<{ open: boolean; id: string; action: BookingStatus }>({
+  const [confirm, setConfirm] = useState<{ open: boolean; id: string; action: BookingStatus | "delete" }>({
     open: false, id: "", action: "confirmed",
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -55,13 +59,28 @@ export default function DashboardPage() {
       const data = await res.json();
       setBookings(data.bookings || []);
     } catch {
-      toast.error("โหลดข้อมูลการจองไม่สำเร็จ");
+      toast.error(t.loadError);
     } finally {
       setLoading(false);
     }
-  }, [filter, today, dateFrom, dateTo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, today, dateFrom, dateTo, lang]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
+
+  async function deleteBooking(id: string) {
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success(t.toastDeleted);
+      loadBookings();
+    } catch {
+      toast.error(t.toastDeleteErr);
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   async function updateStatus(id: string, status: BookingStatus) {
     setActionLoading(id);
@@ -72,10 +91,10 @@ export default function DashboardPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`อัปเดตสถานะเป็น "${STATUS_LABELS[status]}" แล้ว`);
+      toast.success(`${t.toastUpdated} "${STATUS_LABELS[status]}"${t.toastUpdatedSuffix ? ` ${t.toastUpdatedSuffix}` : ""}`);
       loadBookings();
     } catch {
-      toast.error("อัปเดตสถานะไม่สำเร็จ");
+      toast.error(t.toastUpdateErr);
     } finally {
       setActionLoading(null);
     }
@@ -88,16 +107,22 @@ export default function DashboardPage() {
     cancelled: bookings.filter((b) => b.status === "cancelled").length,
   };
 
+  const FILTER_LABELS: Record<FilterType, string> = {
+    today: t.filterToday,
+    month: t.filterMonth,
+    range: t.filterRange,
+  };
+
   return (
     <AdminLayout>
-      <h2 className="text-h1 font-semibold text-forest-green mb-6">แดชบอร์ด</h2>
+      <h2 className="text-h1 font-semibold text-forest-green mb-6">{t.title}</h2>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard label={filter === "today" ? "จองวันนี้" : "จองทั้งหมด"} value={summary.total} color="text-forest-green" />
-        <StatCard label="กำลังใช้งาน" value={summary.confirmed} color="text-moss-green" />
-        <StatCard label="คืนแล้ว" value={summary.returned} color="text-desert-brown" />
-        <StatCard label="ยกเลิก" value={summary.cancelled} color="text-red-500" />
+        <StatCard label={filter === "today" ? t.statTotal : t.statTotalAll} value={summary.total} color="text-forest-green" />
+        <StatCard label={t.statInUse} value={summary.confirmed} color="text-moss-green" />
+        <StatCard label={t.statReturned} value={summary.returned} color="text-desert-brown" />
+        <StatCard label={t.statCancelled} value={summary.cancelled} color="text-red-500" />
       </div>
 
       {/* Filters */}
@@ -113,16 +138,16 @@ export default function DashboardPage() {
                   : "border-neutral-gray text-dark-text hover:border-forest-green"
               }`}
             >
-              {f === "today" ? "วันนี้" : f === "month" ? "เดือนนี้" : "ช่วงวันที่"}
+              {FILTER_LABELS[f]}
             </button>
           ))}
         </div>
         {filter === "range" && (
           <div className="flex gap-2 items-center">
             <input type="date" className="input-field font-dm-sans w-auto" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <span className="text-caption">ถึง</span>
+            <span className="text-caption">{t.filterTo}</span>
             <input type="date" className="input-field font-dm-sans w-auto" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            <button className="btn-primary py-2 px-4" onClick={loadBookings}>ค้นหา</button>
+            <button className="btn-primary py-2 px-4" onClick={loadBookings}>{t.btnSearch}</button>
           </div>
         )}
       </div>
@@ -132,19 +157,19 @@ export default function DashboardPage() {
         {loading ? (
           <div className="flex justify-center py-12"><LoadingSpinner /></div>
         ) : bookings.length === 0 ? (
-          <p className="text-center text-neutral-gray py-12">ไม่มีข้อมูลการจอง</p>
+          <p className="text-center text-neutral-gray py-12">{t.noData}</p>
         ) : (
           <table className="w-full text-caption">
             <thead>
               <tr className="border-b border-neutral-gray text-left">
-                <Th>ทะเบียน</Th>
-                <Th>ชื่อ</Th>
-                <Th>วันเวลา</Th>
-                <Th>โครงการ / จุดหมาย</Th>
-                <Th>ชั้นจอด</Th>
-                <Th>สถานะ</Th>
-                <Th>ภาพ</Th>
-                <Th>Action</Th>
+                <Th>{t.colPlate}</Th>
+                <Th>{t.colName}</Th>
+                <Th>{t.colDateTime}</Th>
+                <Th>{t.colDest}</Th>
+                <Th>{t.colParking}</Th>
+                <Th>{t.colStatus}</Th>
+                <Th>{t.colImage}</Th>
+                <Th>{t.colAction}</Th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +210,7 @@ export default function DashboardPage() {
                             className="px-2 py-1 text-caption bg-forest-green text-white rounded hover:bg-moss-green transition-colors"
                             onClick={() => setConfirm({ open: true, id: b.id, action: "confirmed" })}
                           >
-                            ยืนยัน
+                            {t.btnConfirm}
                           </button>
                         )}
                         {(b.status === "pending" || b.status === "confirmed") && (
@@ -193,9 +218,15 @@ export default function DashboardPage() {
                             className="px-2 py-1 text-caption bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                             onClick={() => setConfirm({ open: true, id: b.id, action: "cancelled" })}
                           >
-                            ยกเลิก
+                            {t.btnCancel}
                           </button>
                         )}
+                        <button
+                          className="px-2 py-1 text-caption bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                          onClick={() => setConfirm({ open: true, id: b.id, action: "delete" })}
+                        >
+                          {t.btnDelete}
+                        </button>
                       </div>
                     )}
                   </td>
@@ -208,16 +239,28 @@ export default function DashboardPage() {
 
       <ConfirmDialog
         open={confirm.open}
-        title={confirm.action === "confirmed" ? "ยืนยันการจอง" : "ยกเลิกการจอง"}
-        message={
-          confirm.action === "confirmed"
-            ? "คุณต้องการยืนยันการจองนี้ใช่หรือไม่?"
-            : "คุณต้องการยกเลิกการจองนี้ใช่หรือไม่?"
+        title={
+          confirm.action === "confirmed" ? t.dialogConfirmTitle
+          : confirm.action === "delete" ? t.dialogDeleteTitle
+          : t.dialogCancelTitle
         }
-        confirmLabel={confirm.action === "confirmed" ? "ยืนยัน" : "ยกเลิกการจอง"}
-        danger={confirm.action === "cancelled"}
+        message={
+          confirm.action === "confirmed" ? t.dialogConfirmMsg
+          : confirm.action === "delete" ? t.dialogDeleteMsg
+          : t.dialogCancelMsg
+        }
+        confirmLabel={
+          confirm.action === "confirmed" ? t.dialogConfirmLabel
+          : confirm.action === "delete" ? t.dialogDeleteLabel
+          : t.dialogCancelLabel
+        }
+        danger={confirm.action === "cancelled" || confirm.action === "delete"}
         onConfirm={() => {
-          updateStatus(confirm.id, confirm.action);
+          if (confirm.action === "delete") {
+            deleteBooking(confirm.id);
+          } else {
+            updateStatus(confirm.id, confirm.action as BookingStatus);
+          }
           setConfirm({ open: false, id: "", action: "confirmed" });
         }}
         onCancel={() => setConfirm({ open: false, id: "", action: "confirmed" })}

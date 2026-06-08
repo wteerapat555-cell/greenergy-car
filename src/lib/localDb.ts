@@ -167,6 +167,15 @@ export function addBooking(data: {
   return attachVehicle(b, db.vehicles);
 }
 
+export function deleteBooking(id: string): boolean {
+  const db = read();
+  const idx = db.bookings.findIndex((b) => b.id === id);
+  if (idx === -1) return false;
+  db.bookings.splice(idx, 1);
+  write(db);
+  return true;
+}
+
 export function updateBookingStatus(id: string, status: string): BookingWithVehicle | null {
   const db = read();
   const b = db.bookings.find((b) => b.id === id);

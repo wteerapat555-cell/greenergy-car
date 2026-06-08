@@ -6,9 +6,13 @@ import toast from "react-hot-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useLang, T } from "@/lib/lang";
 import type { Vehicle } from "@/types";
 
 export default function VehiclesPage() {
+  const { lang } = useLang();
+  const t = T.vehicles[lang];
+
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -22,12 +26,12 @@ export default function VehiclesPage() {
   async function loadVehicles() {
     setLoading(true);
     try {
-      const res = await fetch("/api/vehicles?all=true");
+      const res = await fetch("/api/vehicles");
       if (!res.ok) throw new Error();
       const data = await res.json();
       setVehicles(data.vehicles || []);
     } catch {
-      toast.error("โหลดข้อมูลรถไม่สำเร็จ");
+      toast.error(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -36,7 +40,7 @@ export default function VehiclesPage() {
   useEffect(() => { loadVehicles(); }, []);
 
   async function handleAdd() {
-    if (!newPlate.trim()) { toast.error("กรุณากรอกทะเบียนรถ"); return; }
+    if (!newPlate.trim()) { toast.error(t.errPlate); return; }
     setActionLoading(true);
     try {
       let image_url = null;
@@ -54,15 +58,15 @@ export default function VehiclesPage() {
       });
       const resData = res.headers.get("content-type")?.includes("application/json")
         ? await res.json() : {};
-      if (!res.ok) throw new Error(resData.error || "เพิ่มทะเบียนรถไม่สำเร็จ");
-      toast.success("เพิ่มทะเบียนรถสำเร็จ");
+      if (!res.ok) throw new Error(resData.error || t.toastAddErr);
+      toast.success(t.toastAdded);
       setShowModal(false);
       setNewPlate("");
       setNewImageFile(null);
       setNewImagePreview(null);
       loadVehicles();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "เพิ่มทะเบียนรถไม่สำเร็จ");
+      toast.error(e instanceof Error ? e.message : t.toastAddErr);
     } finally {
       setActionLoading(false);
     }
@@ -73,10 +77,10 @@ export default function VehiclesPage() {
     try {
       const res = await fetch(`/api/vehicles/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("ลบทะเบียนรถสำเร็จ");
+      toast.success(t.toastDeleted);
       loadVehicles();
     } catch {
-      toast.error("ลบทะเบียนรถไม่สำเร็จ");
+      toast.error(t.toastDeleteErr);
     } finally {
       setActionLoading(false);
       setDeleteTarget(null);
@@ -86,16 +90,16 @@ export default function VehiclesPage() {
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-h1 font-semibold text-forest-green">จัดการรถ</h2>
+        <h2 className="text-h1 font-semibold text-forest-green">{t.title}</h2>
         <button className="btn-primary" onClick={() => setShowModal(true)}>
-          + เพิ่มทะเบียนรถ
+          {t.btnAdd}
         </button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><LoadingSpinner /></div>
       ) : vehicles.length === 0 ? (
-        <div className="card text-center py-12 text-neutral-gray">ยังไม่มีรถในระบบ</div>
+        <div className="card text-center py-12 text-neutral-gray">{t.noVehicle}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {vehicles.map((v) => (
@@ -110,20 +114,20 @@ export default function VehiclesPage() {
                 />
               ) : (
                 <div className="w-20 h-14 bg-linen rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-neutral-gray text-caption">ไม่มีภาพ</span>
+                  <span className="text-neutral-gray text-caption">{t.noImage}</span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-body font-semibold font-dm-sans truncate">{v.license_plate}</p>
                 <p className="text-caption text-neutral-gray">
-                  {v.is_active ? "ใช้งานได้" : "ไม่ใช้งาน"}
+                  {v.is_active ? t.active : t.inactive}
                 </p>
               </div>
               <button
                 className="text-caption text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
                 onClick={() => setDeleteTarget(v.id)}
               >
-                ลบ
+                {t.btnDelete}
               </button>
             </div>
           ))}
@@ -134,20 +138,20 @@ export default function VehiclesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="card w-full max-w-sm">
-            <h3 className="text-h2 font-semibold mb-4">เพิ่มทะเบียนรถ</h3>
+            <h3 className="text-h2 font-semibold mb-4">{t.modalTitle}</h3>
             <div className="space-y-4">
               <div>
-                <label className="label">ทะเบียนรถ</label>
+                <label className="label">{t.labelPlate}</label>
                 <input
                   type="text"
                   className="input-field font-dm-sans"
-                  placeholder="เช่น กข 1234"
+                  placeholder={t.placeholderPlate}
                   value={newPlate}
                   onChange={(e) => setNewPlate(e.target.value)}
                 />
               </div>
               <div>
-                <label className="label">ภาพรถ (ไม่บังคับ)</label>
+                <label className="label">{t.labelImage}</label>
                 <div
                   className="border-2 border-dashed border-neutral-gray rounded-lg p-4 text-center cursor-pointer hover:border-forest-green transition-colors"
                   onClick={() => fileRef.current?.click()}
@@ -155,7 +159,7 @@ export default function VehiclesPage() {
                   {newImagePreview ? (
                     <Image src={newImagePreview} alt="preview" width={200} height={120} className="mx-auto rounded object-cover" />
                   ) : (
-                    <p className="text-caption text-neutral-gray">คลิกเพื่ออัปโหลดภาพ</p>
+                    <p className="text-caption text-neutral-gray">{t.uploadHint}</p>
                   )}
                 </div>
                 <input
@@ -178,10 +182,10 @@ export default function VehiclesPage() {
                 className="btn-secondary"
                 onClick={() => { setShowModal(false); setNewPlate(""); setNewImageFile(null); setNewImagePreview(null); }}
               >
-                ยกเลิก
+                {t.btnCancel}
               </button>
               <button className="btn-primary" onClick={handleAdd} disabled={actionLoading}>
-                {actionLoading ? <LoadingSpinner size={20} /> : "เพิ่ม"}
+                {actionLoading ? <LoadingSpinner size={20} /> : t.btnAddConfirm}
               </button>
             </div>
           </div>
@@ -190,9 +194,9 @@ export default function VehiclesPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="ลบทะเบียนรถ"
-        message="คุณต้องการลบทะเบียนรถนี้ออกจากระบบใช่หรือไม่?"
-        confirmLabel="ลบ"
+        title={t.confirmDeleteTitle}
+        message={t.confirmDeleteMsg}
+        confirmLabel={t.confirmDeleteLabel}
         danger
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
         onCancel={() => setDeleteTarget(null)}

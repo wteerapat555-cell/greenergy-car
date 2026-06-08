@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { LangProvider } from "@/lib/lang";
 
 export const metadata: Metadata = {
   title: "Greenergy — Car Reservation",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body className="min-h-screen bg-linen font-sarabun">
-        {children}
+        <LangProvider>
+          {children}
+        </LangProvider>
         <Toaster
           position="top-center"
           toastOptions={{

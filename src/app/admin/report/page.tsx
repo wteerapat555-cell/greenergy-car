@@ -5,14 +5,8 @@ import toast from "react-hot-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatThaiDate } from "@/lib/utils";
+import { useLang, T } from "@/lib/lang";
 import type { Booking, BookingStatus } from "@/types";
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  pending: "รอยืนยัน",
-  confirmed: "ยืนยันแล้ว",
-  returned: "คืนแล้ว",
-  cancelled: "ยกเลิก",
-};
 
 const STATUS_COLORS: Record<BookingStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -40,6 +34,16 @@ interface FuelFill {
 }
 
 export default function ReportPage() {
+  const { lang } = useLang();
+  const t = T.report[lang];
+
+  const STATUS_LABELS: Record<BookingStatus, string> = {
+    pending: t.statusPending,
+    confirmed: t.statusConfirmed,
+    returned: t.statusReturned,
+    cancelled: t.statusCancelled,
+  };
+
   const today = new Date().toISOString().split("T")[0];
   const currentMonth = today.slice(0, 7);
 
@@ -55,8 +59,6 @@ export default function ReportPage() {
   const [fuelConsumption, setFuelConsumption] = useState("");
   const [tollTotal, setTollTotal] = useState("");
 
-  // Fuel fill per vehicle (monthly tab)
-  const [fuelFills, setFuelFills] = useState<Record<string, { liters: string; amount: string; note: string }>>({});
   const [newFill, setNewFill] = useState({ vehicle_id: "", date: today, liters: "", amount: "", note: "" });
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function ReportPage() {
       const data = await res.json();
       setBookings(data.bookings || []);
     } catch {
-      toast.error("โหลดข้อมูลไม่สำเร็จ");
+      toast.error(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -110,14 +112,14 @@ export default function ReportPage() {
       });
       setStats(Object.values(map).sort((a, b) => a.license_plate.localeCompare(b.license_plate)));
     } catch {
-      toast.error("โหลดข้อมูลไม่สำเร็จ");
+      toast.error(t.loadError);
     } finally {
       setLoading(false);
     }
   }
 
   function exportCSV() {
-    const headers = ["ทะเบียน", "ชื่อ", "วันที่", "เวลา", "ชั้นจอด", "สถานะ", "ไมล์ขาไป", "ไมล์ขากลับ"];
+    const headers = [t.colPlate, t.colName, t.colDate, t.colTime, t.colParking, t.colStatus, t.colMileOut, t.colMileIn];
     const rows = bookings.map((b) => [
       b.vehicles?.license_plate || "",
       b.booker_name,
@@ -136,11 +138,11 @@ export default function ReportPage() {
     a.download = `greenergy-${selectedDate || selectedMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("ส่งออก CSV สำเร็จ");
+    toast.success(t.toastExport);
   }
 
   function exportMonthlySummaryCSV() {
-    const headers = ["ทะเบียน", "จำนวนการใช้งาน", "คืนรถแล้ว", "ไมล์รวม (กม.)", "เติมน้ำมัน (ลิตร)"];
+    const headers = [t.colPlate, t.colUsage, t.colReturnedCount, t.colMileTotal, t.colFuel];
     const rows = stats.map((s) => [
       s.license_plate,
       s.count,
@@ -156,18 +158,18 @@ export default function ReportPage() {
     a.download = `greenergy-monthly-${selectedMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("ส่งออก CSV สรุปรายเดือนสำเร็จ");
+    toast.success(t.toastExportMonthly);
   }
 
   function addFuelFill() {
     if (!newFill.vehicle_id || !newFill.liters || !newFill.amount) {
-      toast.error("กรุณากรอกข้อมูลการเติมน้ำมันให้ครบ");
+      toast.error(t.errFuelMissing);
       return;
     }
     const liters = Number(newFill.liters);
     const amount = Number(newFill.amount);
     if (liters <= 0 || amount <= 0) {
-      toast.error("จำนวนลิตรและยอดเงินต้องมากกว่า 0");
+      toast.error(t.errFuelZero);
       return;
     }
     setStats((prev) =>
@@ -188,7 +190,7 @@ export default function ReportPage() {
       })
     );
     setNewFill((f) => ({ ...f, liters: "", amount: "", note: "" }));
-    toast.success("บันทึกการเติมน้ำมันแล้ว");
+    toast.success(t.toastFuelAdded);
   }
 
   function removeFuelFill(vehicle_id: string, fill_id: string) {
@@ -212,23 +214,25 @@ export default function ReportPage() {
     : 0;
   const grandTotal = fuelCost + Number(tollTotal || 0);
 
+  const TAB_LABELS = { daily: t.tabDaily, monthly: t.tabMonthly, expense: t.tabExpense };
+
   return (
     <AdminLayout>
-      <h2 className="text-h1 font-semibold text-forest-green mb-6">รายงาน</h2>
+      <h2 className="text-h1 font-semibold text-forest-green mb-6">{t.title}</h2>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-neutral-gray pb-0">
-        {(["daily", "monthly", "expense"] as const).map((t) => (
+        {(["daily", "monthly", "expense"] as const).map((tb) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tb}
+            onClick={() => setTab(tb)}
             className={`px-4 py-2 text-body font-semibold border-b-2 transition-colors -mb-px ${
-              tab === t
+              tab === tb
                 ? "border-forest-green text-forest-green"
                 : "border-transparent text-neutral-gray hover:text-dark-text"
             }`}
           >
-            {t === "daily" ? "รายวัน" : t === "monthly" ? "รายเดือน" : "ค่าใช้จ่าย"}
+            {TAB_LABELS[tb]}
           </button>
         ))}
       </div>
@@ -243,11 +247,10 @@ export default function ReportPage() {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
-            <button className="btn-secondary py-2 px-4" onClick={loadDaily}>โหลดใหม่</button>
-            <button className="btn-secondary py-2 px-4" onClick={exportCSV}>Export CSV</button>
+            <button className="btn-secondary py-2 px-4" onClick={loadDaily}>{t.btnReload}</button>
+            <button className="btn-secondary py-2 px-4" onClick={exportCSV}>{t.btnExportCSV}</button>
           </div>
 
-          {/* Quick stats */}
           {!loading && bookings.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {(["pending","confirmed","returned","cancelled"] as BookingStatus[]).map((s) => (
@@ -264,14 +267,14 @@ export default function ReportPage() {
           {loading ? (
             <div className="flex justify-center py-12"><LoadingSpinner /></div>
           ) : bookings.length === 0 ? (
-            <div className="card text-center py-12 text-neutral-gray">ไม่มีข้อมูลการจองในวันนี้</div>
+            <div className="card text-center py-12 text-neutral-gray">{t.noDataDaily}</div>
           ) : (
             <div className="card overflow-x-auto">
               <table className="w-full text-caption">
                 <thead>
                   <tr className="border-b border-neutral-gray">
-                    <Th>ทะเบียน</Th><Th>ชื่อ</Th><Th>เวลา</Th><Th>ชั้นจอด</Th>
-                    <Th>ไมล์ขาไป</Th><Th>ไมล์ขากลับ</Th><Th>ระยะ</Th><Th>สถานะ</Th>
+                    <Th>{t.colPlate}</Th><Th>{t.colName}</Th><Th>{t.colTime}</Th><Th>{t.colParking}</Th>
+                    <Th>{t.colMileOut}</Th><Th>{t.colMileIn}</Th><Th>{t.colDist}</Th><Th>{t.colStatus}</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -288,7 +291,7 @@ export default function ReportPage() {
                       <td className="py-2 px-2 font-dm-sans">{b.mileage_in?.toLocaleString() || "—"}</td>
                       <td className="py-2 px-2 font-dm-sans">
                         {b.mileage_in && b.mileage_out
-                          ? `${(b.mileage_in - b.mileage_out).toLocaleString()} กม.`
+                          ? `${(b.mileage_in - b.mileage_out).toLocaleString()} ${t.distUnit}`
                           : "—"}
                       </td>
                       <td className="py-2 px-2">
@@ -315,9 +318,9 @@ export default function ReportPage() {
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             />
-            <button className="btn-secondary py-2 px-4" onClick={loadMonthly}>โหลดใหม่</button>
-            <button className="btn-secondary py-2 px-4" onClick={exportCSV}>Export CSV (รายการ)</button>
-            <button className="btn-secondary py-2 px-4" onClick={exportMonthlySummaryCSV}>Export CSV (สรุป)</button>
+            <button className="btn-secondary py-2 px-4" onClick={loadMonthly}>{t.btnReload}</button>
+            <button className="btn-secondary py-2 px-4" onClick={exportCSV}>{t.exportDetailLabel}</button>
+            <button className="btn-secondary py-2 px-4" onClick={exportMonthlySummaryCSV}>{t.exportSummaryLabel}</button>
           </div>
 
           {loading ? (
@@ -326,35 +329,39 @@ export default function ReportPage() {
             <div className="space-y-6">
               {/* Summary cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <SummaryCard label="การจองทั้งหมด" value={`${bookings.length} ครั้ง`} />
-                <SummaryCard label="คืนรถแล้ว" value={`${bookings.filter((b) => b.status === "returned").length} ครั้ง`} />
-                <SummaryCard label="ไมล์รวม" value={`${totalMileage.toLocaleString()} กม.`} />
-                <SummaryCard label="เติมน้ำมันรวม" value={`${totalFuelLiters.toFixed(1)} ล.`} />
+                {t.summaryCards.map((label, i) => (
+                  <SummaryCard key={i} label={label} value={`${
+                    i === 0 ? bookings.length
+                    : i === 1 ? bookings.filter((b) => b.status === "returned").length
+                    : i === 2 ? totalMileage.toLocaleString()
+                    : totalFuelLiters.toFixed(1)
+                  } ${t.summaryUnits[i]}`} />
+                ))}
               </div>
 
               {/* Per-vehicle detail table */}
               <div className="card overflow-x-auto">
-                <h3 className="text-h2 font-semibold mb-3">สรุปรายคัน</h3>
+                <h3 className="text-h2 font-semibold mb-3">{t.monthlySumTitle}</h3>
                 {stats.length === 0 ? (
-                  <p className="text-neutral-gray text-caption py-4 text-center">ไม่มีข้อมูลในเดือนนี้</p>
+                  <p className="text-neutral-gray text-caption py-4 text-center">{t.noMonthlyData}</p>
                 ) : (
                   <table className="w-full text-caption">
                     <thead>
                       <tr className="border-b border-neutral-gray">
-                        <Th>ทะเบียน</Th>
-                        <Th>จำนวนใช้งาน</Th>
-                        <Th>คืนรถแล้ว</Th>
-                        <Th>ไมล์รวม (กม.)</Th>
-                        <Th>เติมน้ำมัน (ล.)</Th>
-                        <Th>สัดส่วนไมล์</Th>
+                        <Th>{t.colPlate}</Th>
+                        <Th>{t.colUsage}</Th>
+                        <Th>{t.colReturnedCount}</Th>
+                        <Th>{t.colMileTotal}</Th>
+                        <Th>{t.colFuel}</Th>
+                        <Th>{t.colShare}</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {stats.map((s) => (
                         <tr key={s.vehicle_id} className="border-b border-neutral-gray/40 hover:bg-linen/50">
                           <td className="py-2.5 px-2 font-dm-sans font-semibold">{s.license_plate}</td>
-                          <td className="py-2.5 px-2 font-dm-sans">{s.count} ครั้ง</td>
-                          <td className="py-2.5 px-2 font-dm-sans">{s.returned_count} ครั้ง</td>
+                          <td className="py-2.5 px-2 font-dm-sans">{s.count} {t.usageUnit}</td>
+                          <td className="py-2.5 px-2 font-dm-sans">{s.returned_count} {t.usageUnit}</td>
                           <td className="py-2.5 px-2 font-dm-sans">{s.total_mileage.toLocaleString()}</td>
                           <td className="py-2.5 px-2 font-dm-sans">{s.fuel_total_liters.toFixed(2)}</td>
                           <td className="py-2.5 px-2">
@@ -374,12 +381,11 @@ export default function ReportPage() {
                           </td>
                         </tr>
                       ))}
-                      {/* Total row */}
                       <tr className="bg-linen font-semibold">
-                        <td className="py-2.5 px-2">รวม</td>
-                        <td className="py-2.5 px-2 font-dm-sans">{bookings.length} ครั้ง</td>
+                        <td className="py-2.5 px-2">{t.totalRow}</td>
+                        <td className="py-2.5 px-2 font-dm-sans">{bookings.length} {t.usageUnit}</td>
                         <td className="py-2.5 px-2 font-dm-sans">
-                          {bookings.filter((b) => b.status === "returned").length} ครั้ง
+                          {bookings.filter((b) => b.status === "returned").length} {t.usageUnit}
                         </td>
                         <td className="py-2.5 px-2 font-dm-sans">{totalMileage.toLocaleString()}</td>
                         <td className="py-2.5 px-2 font-dm-sans">{totalFuelLiters.toFixed(2)}</td>
@@ -392,28 +398,27 @@ export default function ReportPage() {
 
               {/* Fuel fill section */}
               <div className="card">
-                <h3 className="text-h2 font-semibold mb-4">บันทึกการเติมน้ำมันต่อครั้ง</h3>
+                <h3 className="text-h2 font-semibold mb-4">{t.fuelFillTitle}</h3>
 
-                {/* Add fuel fill form */}
                 {stats.length > 0 && (
                   <div className="bg-linen rounded-lg p-4 mb-4">
-                    <p className="text-caption font-semibold text-dark-text/70 mb-3">เพิ่มรายการเติมน้ำมัน</p>
+                    <p className="text-caption font-semibold text-dark-text/70 mb-3">{t.addFuelTitle}</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                       <div>
-                        <label className="label">ทะเบียนรถ</label>
+                        <label className="label">{t.labelVehicle}</label>
                         <select
                           className="input-field font-dm-sans"
                           value={newFill.vehicle_id}
                           onChange={(e) => setNewFill((f) => ({ ...f, vehicle_id: e.target.value }))}
                         >
-                          <option value="">— เลือกรถ —</option>
+                          <option value="">{t.selectVehicle}</option>
                           {stats.map((s) => (
                             <option key={s.vehicle_id} value={s.vehicle_id}>{s.license_plate}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="label">วันที่เติม</label>
+                        <label className="label">{t.labelFillDate}</label>
                         <input
                           type="date"
                           className="input-field font-dm-sans"
@@ -422,43 +427,42 @@ export default function ReportPage() {
                         />
                       </div>
                       <div>
-                        <label className="label">จำนวน (ลิตร)</label>
+                        <label className="label">{t.labelLiters}</label>
                         <input
                           type="number"
                           className="input-field font-dm-sans"
-                          placeholder="เช่น 35.5"
+                          placeholder={t.placeholderLiters}
                           value={newFill.liters}
                           onChange={(e) => setNewFill((f) => ({ ...f, liters: e.target.value }))}
                         />
                       </div>
                       <div>
-                        <label className="label">ยอดเงิน (บาท)</label>
+                        <label className="label">{t.labelAmount}</label>
                         <input
                           type="number"
                           className="input-field font-dm-sans"
-                          placeholder="เช่น 1500"
+                          placeholder={t.placeholderAmount}
                           value={newFill.amount}
                           onChange={(e) => setNewFill((f) => ({ ...f, amount: e.target.value }))}
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <label className="label">หมายเหตุ (ไม่บังคับ)</label>
+                        <label className="label">{t.labelNote}</label>
                         <input
                           type="text"
                           className="input-field"
-                          placeholder="เช่น ปตท. สาขาลาดกระบัง"
+                          placeholder={t.placeholderNote}
                           value={newFill.note}
                           onChange={(e) => setNewFill((f) => ({ ...f, note: e.target.value }))}
                         />
                       </div>
                     </div>
                     <button className="btn-primary py-2 px-5" onClick={addFuelFill}>
-                      + เพิ่มรายการ
+                      {t.btnAddFuel}
                     </button>
                   </div>
                 )}
 
-                {/* Fuel fill list per vehicle */}
                 {stats.some((s) => s.fuel_fills.length > 0) ? (
                   <div className="space-y-4">
                     {stats.filter((s) => s.fuel_fills.length > 0).map((s) => (
@@ -467,31 +471,31 @@ export default function ReportPage() {
                         <table className="w-full text-caption">
                           <thead>
                             <tr className="border-b border-neutral-gray">
-                              <Th>วันที่</Th><Th>ลิตร</Th><Th>ยอดเงิน</Th><Th>หมายเหตุ</Th><th className="py-2 px-2" />
+                              <Th>{t.colFuelDate}</Th><Th>{t.colFuelLiters}</Th><Th>{t.colFuelAmount}</Th><Th>{t.colFuelNote}</Th><th className="py-2 px-2" />
                             </tr>
                           </thead>
                           <tbody>
                             {s.fuel_fills.map((f) => (
                               <tr key={f.id} className="border-b border-neutral-gray/40">
                                 <td className="py-2 px-2 font-dm-sans">{formatThaiDate(f.date)}</td>
-                                <td className="py-2 px-2 font-dm-sans">{f.liters.toFixed(2)} ล.</td>
-                                <td className="py-2 px-2 font-dm-sans">{f.amount.toLocaleString()} บาท</td>
+                                <td className="py-2 px-2 font-dm-sans">{f.liters.toFixed(2)} {t.fuelUnit}</td>
+                                <td className="py-2 px-2 font-dm-sans">{f.amount.toLocaleString()} {t.fuelBaht}</td>
                                 <td className="py-2 px-2">{f.note || "—"}</td>
                                 <td className="py-2 px-2">
                                   <button
                                     onClick={() => removeFuelFill(s.vehicle_id, f.id)}
                                     className="text-red-500 hover:text-red-700 text-caption"
                                   >
-                                    ลบ
+                                    {t.btnDeleteFuel}
                                   </button>
                                 </td>
                               </tr>
                             ))}
                             <tr className="bg-linen font-semibold">
-                              <td className="py-2 px-2">รวม</td>
-                              <td className="py-2 px-2 font-dm-sans">{s.fuel_total_liters.toFixed(2)} ล.</td>
+                              <td className="py-2 px-2">{t.fuelTotalRow}</td>
+                              <td className="py-2 px-2 font-dm-sans">{s.fuel_total_liters.toFixed(2)} {t.fuelUnit}</td>
                               <td className="py-2 px-2 font-dm-sans">
-                                {s.fuel_fills.reduce((sum, f) => sum + f.amount, 0).toLocaleString()} บาท
+                                {s.fuel_fills.reduce((sum, f) => sum + f.amount, 0).toLocaleString()} {t.fuelBaht}
                               </td>
                               <td colSpan={2} />
                             </tr>
@@ -502,20 +506,19 @@ export default function ReportPage() {
                   </div>
                 ) : (
                   <p className="text-caption text-neutral-gray text-center py-4">
-                    ยังไม่มีรายการเติมน้ำมัน — เพิ่มจากแบบฟอร์มด้านบน
+                    {t.noFuelData}
                   </p>
                 )}
               </div>
 
-              {/* All bookings detail this month */}
               {bookings.length > 0 && (
                 <div className="card overflow-x-auto">
-                  <h3 className="text-h2 font-semibold mb-3">รายการจองทั้งหมดในเดือนนี้</h3>
+                  <h3 className="text-h2 font-semibold mb-3">{t.allBookingsTitle}</h3>
                   <table className="w-full text-caption">
                     <thead>
                       <tr className="border-b border-neutral-gray">
-                        <Th>วันที่</Th><Th>ทะเบียน</Th><Th>ชื่อ</Th><Th>เวลา</Th>
-                        <Th>ไมล์ขาไป</Th><Th>ไมล์ขากลับ</Th><Th>สถานะ</Th>
+                        <Th>{t.colDate}</Th><Th>{t.colPlate}</Th><Th>{t.colName}</Th><Th>{t.colTime}</Th>
+                        <Th>{t.colMileOut}</Th><Th>{t.colMileIn}</Th><Th>{t.colStatus}</Th>
                       </tr>
                     </thead>
                     <tbody>
@@ -556,34 +559,34 @@ export default function ReportPage() {
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             />
-            <button className="btn-secondary py-2 px-4" onClick={loadMonthly}>โหลดใหม่</button>
+            <button className="btn-secondary py-2 px-4" onClick={loadMonthly}>{t.btnReload}</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div className="card">
-              <h3 className="text-h2 font-semibold mb-4">กรอกข้อมูลค่าใช้จ่าย</h3>
+              <h3 className="text-h2 font-semibold mb-4">{t.expenseTitle}</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="label">ค่าน้ำมันต่อลิตร (บาท)</label>
+                  <label className="label">{t.labelFuelRate}</label>
                   <input
                     type="number"
                     className="input-field font-dm-sans"
-                    placeholder="เช่น 42.50"
+                    placeholder={t.placeholderFuelRate}
                     value={fuelRate}
                     onChange={(e) => setFuelRate(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="label">อัตราสิ้นเปลือง (กม./ลิตร)</label>
+                  <label className="label">{t.labelConsumption}</label>
                   <input
                     type="number"
                     className="input-field font-dm-sans"
-                    placeholder="เช่น 12"
+                    placeholder={t.placeholderConsumption}
                     value={fuelConsumption}
                     onChange={(e) => setFuelConsumption(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="label">ค่าทางด่วนรวม (บาท)</label>
+                  <label className="label">{t.labelToll}</label>
                   <input
                     type="number"
                     className="input-field font-dm-sans"
@@ -593,46 +596,45 @@ export default function ReportPage() {
                   />
                 </div>
 
-                {/* Fuel fill per vehicle in expense tab */}
                 {stats.length > 0 && (
                   <div className="border-t border-neutral-gray pt-4">
-                    <p className="label mb-3">เพิ่มรายการเติมน้ำมัน</p>
+                    <p className="label mb-3">{t.addFuelTitle}</p>
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
-                        <label className="label">ทะเบียนรถ</label>
+                        <label className="label">{t.labelVehicle}</label>
                         <select
                           className="input-field font-dm-sans"
                           value={newFill.vehicle_id}
                           onChange={(e) => setNewFill((f) => ({ ...f, vehicle_id: e.target.value }))}
                         >
-                          <option value="">— เลือกรถ —</option>
+                          <option value="">{t.selectVehicle}</option>
                           {stats.map((s) => (
                             <option key={s.vehicle_id} value={s.vehicle_id}>{s.license_plate}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="label">จำนวน (ลิตร)</label>
+                        <label className="label">{t.labelLiters}</label>
                         <input
                           type="number"
                           className="input-field font-dm-sans"
-                          placeholder="35.5"
+                          placeholder={t.placeholderLiters}
                           value={newFill.liters}
                           onChange={(e) => setNewFill((f) => ({ ...f, liters: e.target.value }))}
                         />
                       </div>
                       <div>
-                        <label className="label">ยอดเงิน (บาท)</label>
+                        <label className="label">{t.labelAmount}</label>
                         <input
                           type="number"
                           className="input-field font-dm-sans"
-                          placeholder="1500"
+                          placeholder={t.placeholderAmount}
                           value={newFill.amount}
                           onChange={(e) => setNewFill((f) => ({ ...f, amount: e.target.value }))}
                         />
                       </div>
                       <div>
-                        <label className="label">วันที่เติม</label>
+                        <label className="label">{t.labelFillDate}</label>
                         <input
                           type="date"
                           className="input-field font-dm-sans"
@@ -642,7 +644,7 @@ export default function ReportPage() {
                       </div>
                     </div>
                     <button className="btn-primary py-1.5 px-4 text-caption" onClick={addFuelFill}>
-                      + เพิ่มรายการเติมน้ำมัน
+                      {t.btnAddFuel}
                     </button>
                   </div>
                 )}
@@ -650,41 +652,41 @@ export default function ReportPage() {
             </div>
 
             <div className="card">
-              <h3 className="text-h2 font-semibold mb-4">สรุปค่าใช้จ่าย</h3>
+              <h3 className="text-h2 font-semibold mb-4">{t.expenseSummaryTitle}</h3>
               {loading ? <LoadingSpinner /> : (
                 <div className="space-y-3">
                   {stats.map((s) => (
                     <div key={s.vehicle_id} className="flex justify-between text-caption border-b border-neutral-gray/40 pb-2">
                       <span className="font-dm-sans font-semibold">{s.license_plate}</span>
                       <div className="text-right">
-                        <span className="font-dm-sans">{s.total_mileage.toLocaleString()} กม.</span>
+                        <span className="font-dm-sans">{s.total_mileage.toLocaleString()} {t.distUnit}</span>
                         {s.fuel_total_liters > 0 && (
-                          <span className="text-moss-green ml-2">({s.fuel_total_liters.toFixed(1)} ล.)</span>
+                          <span className="text-moss-green ml-2">({s.fuel_total_liters.toFixed(1)} {t.fuelUnit})</span>
                         )}
                       </div>
                     </div>
                   ))}
                   <div className="flex justify-between text-body font-semibold pt-2">
-                    <span>ไมล์รวม</span>
-                    <span className="font-dm-sans">{totalMileage.toLocaleString()} กม.</span>
+                    <span>{t.totalMileLabel}</span>
+                    <span className="font-dm-sans">{totalMileage.toLocaleString()} {t.distUnit}</span>
                   </div>
                   {totalFuelLiters > 0 && (
                     <div className="flex justify-between text-caption">
-                      <span>น้ำมันที่เติมจริง</span>
-                      <span className="font-dm-sans text-moss-green">{totalFuelLiters.toFixed(2)} ลิตร</span>
+                      <span>{t.fuelActual}</span>
+                      <span className="font-dm-sans text-moss-green">{totalFuelLiters.toFixed(2)} {t.fuelUnit}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-caption">
-                    <span>ค่าน้ำมันโดยประมาณ</span>
-                    <span className="font-dm-sans">{fuelCost.toFixed(2)} บาท</span>
+                    <span>{t.fuelEstLabel}</span>
+                    <span className="font-dm-sans">{fuelCost.toFixed(2)} {t.fuelBaht}</span>
                   </div>
                   <div className="flex justify-between text-caption">
-                    <span>ค่าทางด่วน</span>
-                    <span className="font-dm-sans">{Number(tollTotal || 0).toLocaleString()} บาท</span>
+                    <span>{t.tollLabel}</span>
+                    <span className="font-dm-sans">{Number(tollTotal || 0).toLocaleString()} {t.fuelBaht}</span>
                   </div>
                   <div className="flex justify-between text-h2 font-semibold border-t border-neutral-gray pt-3">
-                    <span>ยอดรวม</span>
-                    <span className="font-dm-sans text-forest-green">{grandTotal.toFixed(2)} บาท</span>
+                    <span>{t.grandTotal}</span>
+                    <span className="font-dm-sans text-forest-green">{grandTotal.toFixed(2)} {t.fuelBaht}</span>
                   </div>
                 </div>
               )}

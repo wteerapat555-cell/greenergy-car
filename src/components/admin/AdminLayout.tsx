@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { useLang, LangToggle, T } from "@/lib/lang";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
+  const { lang } = useLang();
+  const tl = T.adminLayout[lang];
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -21,7 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    toast.success("ออกจากระบบแล้ว");
+    toast.success(tl.toastLogout);
     router.push("/admin/login");
   }
 
@@ -30,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-linen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-3 border-forest-green border-t-transparent rounded-full animate-spin"/>
-          <p className="text-body text-forest-green">กำลังตรวจสอบสิทธิ์...</p>
+          <p className="text-body text-forest-green">{tl.checking}</p>
         </div>
       </div>
     );
@@ -39,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     {
       href: "/admin/dashboard",
-      label: "แดชบอร์ด",
+      label: tl.navDashboard,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -49,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     },
     {
       href: "/admin/vehicles",
-      label: "จัดการรถ",
+      label: tl.navVehicles,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h14l3 5v5h-2"/>
@@ -60,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     },
     {
       href: "/admin/monthly",
-      label: "สรุปรายเดือน",
+      label: tl.navMonthly,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -72,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     },
     {
       href: "/admin/report",
-      label: "รายงาน",
+      label: tl.navReport,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"/>
@@ -98,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <circle cx="17.5" cy="17.5" r="1.5"/>
                   </svg>
                 </div>
-                <span className="text-body font-semibold font-sarabun">Greenergy Admin</span>
+                <span className="text-body font-semibold font-sarabun">{tl.brand}</span>
               </Link>
               {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-1 ml-2">
@@ -120,8 +123,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex items-center gap-3">
+              <LangToggle dark />
               <Link href="/" className="text-caption text-white/60 hover:text-white transition-colors hidden sm:block">
-                ← หน้าหลัก
+                {tl.home}
               </Link>
               <button
                 onClick={handleLogout}
@@ -132,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <polyline points="16 17 21 12 16 7"/>
                   <line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
-                ออกจากระบบ
+                {tl.logout}
               </button>
             </div>
           </div>
