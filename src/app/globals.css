@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=DM+Sans:wght@300;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-linen text-dark-text font-sarabun;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-sarabun;
+  }
+
+  input, select, textarea {
+    @apply font-sarabun;
+  }
+
+  .number-input {
+    @apply font-dm-sans;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-forest-green text-white px-6 py-3 rounded-lg font-sarabun font-semibold text-body
+           hover:bg-moss-green transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-forest-green px-6 py-3 rounded-lg font-sarabun font-semibold text-body
+           border border-forest-green hover:bg-linen transition-colors duration-200;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white px-4 py-2 rounded-lg font-sarabun text-body
+           hover:bg-red-700 transition-colors duration-200;
+  }
+
+  .input-field {
+    @apply w-full border border-neutral-gray rounded-lg px-4 py-3 text-body font-sarabun
+           focus:outline-none focus:border-forest-green focus:ring-1 focus:ring-forest-green
+           placeholder:text-neutral-gray bg-white;
+  }
+
+  .card {
+    @apply bg-white rounded-xl border border-neutral-gray p-6;
+  }
+
+  .label {
+    @apply text-caption font-semibold text-dark-text mb-1 block;
+  }
+}
