@@ -1,10 +1,8 @@
 export function formatThaiDate(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  const [y, m, d] = dateStr.split("T")[0].split("-");
+  return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
 }
 
 export function formatTime(timeStr: string) {
