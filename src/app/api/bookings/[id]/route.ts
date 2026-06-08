@@ -37,6 +37,11 @@ export async function PATCH(
 
   if (!status) return NextResponse.json({ error: "ไม่มีข้อมูลที่จะอัปเดต" }, { status: 400 });
 
+  const VALID_STATUSES = ["pending", "confirmed", "returned", "cancelled"];
+  if (!VALID_STATUSES.includes(status)) {
+    return NextResponse.json({ error: "สถานะไม่ถูกต้อง" }, { status: 400 });
+  }
+
   if (!isSupabaseReady()) {
     const booking = local.updateBookingStatus(id, status);
     if (!booking) return NextResponse.json({ error: "ไม่พบการจอง" }, { status: 404 });

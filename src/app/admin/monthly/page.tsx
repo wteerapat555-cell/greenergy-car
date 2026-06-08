@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { formatThaiDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useLang, T } from "@/lib/lang";
 import type { Booking, BookingStatus } from "@/types";
 
@@ -98,7 +98,7 @@ export default function MonthlyPage() {
       vMap[b.vehicle_id].total++;
       if (b.status === "returned") {
         vMap[b.vehicle_id].returned++;
-        if (b.mileage_out && b.mileage_in)
+        if (b.mileage_out != null && b.mileage_in != null)
           vMap[b.vehicle_id].total_mileage += b.mileage_in - b.mileage_out;
       }
       if (b.status === "cancelled") vMap[b.vehicle_id].cancelled++;
@@ -114,7 +114,7 @@ export default function MonthlyPage() {
       const key = b.booker_phone;
       if (!uMap[key]) uMap[key] = { name: b.booker_name, phone: b.booker_phone, count: 0, mileage: 0 };
       uMap[key].count++;
-      if (b.mileage_out && b.mileage_in) uMap[key].mileage += b.mileage_in - b.mileage_out;
+      if (b.mileage_out != null && b.mileage_in != null) uMap[key].mileage += b.mileage_in - b.mileage_out;
     });
     setUserStats(Object.values(uMap).sort((a, b) => b.count - a.count));
   }
@@ -288,7 +288,7 @@ export default function MonthlyPage() {
                     <div className="text-center">
                       <p className="text-caption text-neutral-gray">{t.tollPerTrip}</p>
                       <p className="text-h2 font-dm-sans font-semibold text-desert-brown">
-                        {(tollAmount / totalReturned || 0).toFixed(0)} <span className="text-caption font-normal">{t.tollBaht}</span>
+                        {totalReturned > 0 ? (tollAmount / totalReturned).toFixed(0) : "—"} <span className="text-caption font-normal">{t.tollBaht}</span>
                       </p>
                     </div>
                   )}
@@ -401,7 +401,7 @@ export default function MonthlyPage() {
                           i === 0 ? "bg-forest-green" : i === 1 ? "bg-moss-green" : "bg-neutral-gray/50"
                         }`}/>
                         <div className="flex-1">
-                          <p className="text-caption font-semibold">{formatThaiDate(date)}</p>
+                          <p className="text-caption font-semibold">{formatDate(date, lang)}</p>
                           <div className="w-full bg-neutral-gray/20 rounded-full h-1.5 mt-1">
                             <div
                               className={`h-1.5 rounded-full ${i === 0 ? "bg-forest-green" : "bg-moss-green"}`}
@@ -469,7 +469,7 @@ export default function MonthlyPage() {
               <tbody>
                 {displayedBookings.map((b) => (
                   <tr key={b.id} className="border-b border-neutral-gray/30 hover:bg-linen/50 transition-colors">
-                    <td className="py-2.5 px-2 font-dm-sans">{formatThaiDate(b.booking_date)}</td>
+                    <td className="py-2.5 px-2 font-dm-sans">{formatDate(b.booking_date, lang)}</td>
                     <td className="py-2.5 px-2 font-dm-sans font-semibold">{b.vehicles?.license_plate}</td>
                     <td className="py-2.5 px-2">{b.booker_name}</td>
                     <td className="py-2.5 px-2 font-dm-sans text-neutral-gray">
@@ -477,7 +477,7 @@ export default function MonthlyPage() {
                       {b.booking_time_end ? ` – ${b.booking_time_end.slice(0, 5)}` : ""}
                     </td>
                     <td className="py-2.5 px-2 font-dm-sans">
-                      {b.mileage_out && b.mileage_in
+                      {b.mileage_out != null && b.mileage_in != null
                         ? <span className="text-moss-green font-semibold">{(b.mileage_in - b.mileage_out).toLocaleString()}</span>
                         : <span className="text-neutral-gray">—</span>}
                     </td>

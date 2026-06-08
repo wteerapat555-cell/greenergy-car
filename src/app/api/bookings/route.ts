@@ -40,11 +40,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { vehicle_id, booking_date, booking_time, booking_time_end, booker_name, booker_phone, destination } = body;
 
-  if (!vehicle_id || !booking_date || !booking_time || !booker_name || !booker_phone) {
+  if (!vehicle_id || !booking_date || !booking_time || !booking_time_end || !booker_name || !booker_phone) {
     return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบถ้วน" }, { status: 400 });
   }
-  if (booking_time_end && booking_time_end <= booking_time) {
+  if (booking_time_end <= booking_time) {
     return NextResponse.json({ error: "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น" }, { status: 400 });
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  if (booking_date < today) {
+    return NextResponse.json({ error: "ไม่สามารถจองวันที่ผ่านมาแล้วได้" }, { status: 400 });
   }
 
   if (!isSupabaseReady()) {
@@ -59,12 +64,15 @@ export async function POST(req: NextRequest) {
   }
 
   const db = supabaseAdmin();
-  const { data: existing } = await db
+  // Check time-range overlap (not just exact time match)
+  const { data: overlapping } = await db
     .from("bookings").select("id")
     .eq("vehicle_id", vehicle_id).eq("booking_date", booking_date)
-    .eq("booking_time", booking_time).in("status", ["pending", "confirmed"]).maybeSingle();
+    .in("status", ["pending", "confirmed"])
+    .lt("booking_time", booking_time_end)
+    .gt("booking_time_end", booking_time);
 
-  if (existing) {
+  if (overlapping && overlapping.length > 0) {
     return NextResponse.json(
       { error: "รถคันนี้ถูกจองในวันเวลาดังกล่าวแล้ว กรุณาเลือกเวลาอื่น" },
       { status: 409 }
@@ -73,7 +81,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db
     .from("bookings")
-    .insert({ vehicle_id, booking_date, booking_time, booker_name, booker_phone, status: "pending" })
+    .insert({ vehicle_id, booking_date, booking_time, booking_time_end, booker_name, booker_phone, destination, status: "pending" })
     .select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ booking: data }, { status: 201 });

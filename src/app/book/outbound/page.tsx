@@ -7,7 +7,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import Stepper from "@/components/ui/Stepper";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { generateTimeSlots, validatePhone, formatThaiDate } from "@/lib/utils";
+import { generateTimeSlots, validatePhone, formatDate } from "@/lib/utils";
 import { useLang, LangToggle, T } from "@/lib/lang";
 import type { Vehicle } from "@/types";
 
@@ -228,7 +228,7 @@ export default function OutboundBookingPage() {
                     className="w-full h-40 object-cover rounded-lg mb-4" />
                 )}
                 <Row label={t.rowPlate} value={selectedVehicle?.license_plate || "-"} mono />
-                <Row label={t.rowDate} value={formatThaiDate(form.booking_date)} />
+                <Row label={t.rowDate} value={formatDate(form.booking_date, lang)} />
                 <Row label={t.rowTime} value={`${form.booking_time} – ${form.booking_time_end}${t.timeUnit ? ` ${t.timeUnit}` : ""}`} mono />
                 <Row label={t.rowName} value={form.booker_name} />
                 <Row label={t.rowPhone} value={form.booker_phone} mono />

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { formatThaiDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useLang, T } from "@/lib/lang";
 import type { Booking, BookingStatus } from "@/types";
 
@@ -106,7 +106,7 @@ export default function ReportPage() {
         }
         map[key].count++;
         if (b.status === "returned") map[key].returned_count++;
-        if (b.mileage_in && b.mileage_out) {
+        if (b.mileage_in != null && b.mileage_out != null) {
           map[key].total_mileage += b.mileage_in - b.mileage_out;
         }
       });
@@ -290,7 +290,7 @@ export default function ReportPage() {
                       <td className="py-2 px-2 font-dm-sans">{b.mileage_out?.toLocaleString() || "—"}</td>
                       <td className="py-2 px-2 font-dm-sans">{b.mileage_in?.toLocaleString() || "—"}</td>
                       <td className="py-2 px-2 font-dm-sans">
-                        {b.mileage_in && b.mileage_out
+                        {b.mileage_in != null && b.mileage_out != null
                           ? `${(b.mileage_in - b.mileage_out).toLocaleString()} ${t.distUnit}`
                           : "—"}
                       </td>
@@ -477,7 +477,7 @@ export default function ReportPage() {
                           <tbody>
                             {s.fuel_fills.map((f) => (
                               <tr key={f.id} className="border-b border-neutral-gray/40">
-                                <td className="py-2 px-2 font-dm-sans">{formatThaiDate(f.date)}</td>
+                                <td className="py-2 px-2 font-dm-sans">{formatDate(f.date, lang)}</td>
                                 <td className="py-2 px-2 font-dm-sans">{f.liters.toFixed(2)} {t.fuelUnit}</td>
                                 <td className="py-2 px-2 font-dm-sans">{f.amount.toLocaleString()} {t.fuelBaht}</td>
                                 <td className="py-2 px-2">{f.note || "—"}</td>
@@ -524,7 +524,7 @@ export default function ReportPage() {
                     <tbody>
                       {bookings.map((b) => (
                         <tr key={b.id} className="border-b border-neutral-gray/40 hover:bg-linen/50">
-                          <td className="py-2 px-2 font-dm-sans">{formatThaiDate(b.booking_date)}</td>
+                          <td className="py-2 px-2 font-dm-sans">{formatDate(b.booking_date, lang)}</td>
                           <td className="py-2 px-2 font-dm-sans font-semibold">{b.vehicles?.license_plate}</td>
                           <td className="py-2 px-2">{b.booker_name}</td>
                           <td className="py-2 px-2 font-dm-sans">

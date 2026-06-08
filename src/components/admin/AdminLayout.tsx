@@ -20,6 +20,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         else setChecking(false);
       })
       .catch(() => router.replace("/admin/login"));
+
+    // Detect 401 from any admin API call during session
+    const origFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await origFetch(...args);
+      const url = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : "";
+      if (res.status === 401 && url.includes("/api/")) {
+        router.replace("/admin/login");
+      }
+      return res;
+    };
+    return () => { window.fetch = origFetch; };
   }, [router]);
 
   async function handleLogout() {

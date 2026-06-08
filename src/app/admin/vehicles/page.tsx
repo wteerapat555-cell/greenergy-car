@@ -76,11 +76,12 @@ export default function VehiclesPage() {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/vehicles/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t.toastDeleteErr);
       toast.success(t.toastDeleted);
       loadVehicles();
-    } catch {
-      toast.error(t.toastDeleteErr);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t.toastDeleteErr);
     } finally {
       setActionLoading(false);
       setDeleteTarget(null);

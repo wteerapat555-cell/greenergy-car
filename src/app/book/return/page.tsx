@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { formatThaiDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useLang, LangToggle, T } from "@/lib/lang";
 import type { Booking } from "@/types";
 
@@ -34,7 +34,7 @@ export default function ReturnPage() {
   const selectedBooking = bookings.find((b) => b.id === form.booking_id);
 
   useEffect(() => {
-    fetch("/api/bookings?status=confirmed,pending")
+    fetch("/api/bookings?status=confirmed")
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => setBookings(data.bookings || []))
       .catch(() => toast.error(t.loadError))
@@ -68,7 +68,7 @@ export default function ReturnPage() {
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) { toast.error(t.uploadError); setPreview(null); return; }
+      if (!res.ok) { toast.error(t.uploadError); setPreview(null); setForm((f) => ({ ...f, return_image_url: "" })); return; }
       setForm((f) => ({ ...f, return_image_url: data.url }));
     } finally {
       setUploading(false);
@@ -78,8 +78,8 @@ export default function ReturnPage() {
   function validate() {
     const errs: Record<string, string> = {};
     if (!form.booking_id) errs.booking_id = t.errBooking;
-    if (!form.mileage_out) errs.mileage_out = t.errMileOut;
-    if (!form.mileage_in) errs.mileage_in = t.errMileIn;
+    if (form.mileage_out === "") errs.mileage_out = t.errMileOut;
+    if (form.mileage_in === "") errs.mileage_in = t.errMileIn;
     else if (Number(form.mileage_in) <= Number(form.mileage_out)) errs.mileage_in = t.errMileInLow;
     if (!form.parking_floor.trim()) errs.parking_floor = t.errParking;
     if (!form.return_image_url) errs.image = t.errImage;
@@ -147,7 +147,7 @@ export default function ReturnPage() {
                 <option value="">{t.selectPlate}</option>
                 {bookings.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.vehicles?.license_plate} — {b.booker_name} ({formatThaiDate(b.booking_date)})
+                    {b.vehicles?.license_plate} — {b.booker_name} ({formatDate(b.booking_date, lang)})
                   </option>
                 ))}
               </select>
@@ -164,7 +164,7 @@ export default function ReturnPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-dark-text/60">{t.infoDate}</span>
-                <span className="font-dm-sans">{formatThaiDate(selectedBooking.booking_date)}</span>
+                <span className="font-dm-sans">{formatDate(selectedBooking.booking_date, lang)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-dark-text/60">{t.infoTime}</span>
@@ -188,7 +188,7 @@ export default function ReturnPage() {
           <div>
             <label className="label">
               {t.labelMileOut}
-              {selectedBooking?.mileage_out && (
+              {selectedBooking?.mileage_out != null && (
                 <span className="text-moss-green text-caption ml-2">({t.mileOutSaved} {selectedBooking.mileage_out.toLocaleString()})</span>
               )}
             </label>

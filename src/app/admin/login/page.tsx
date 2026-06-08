@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
@@ -38,6 +39,17 @@ export default function AdminLoginPage() {
 
   return (
     <main className="min-h-screen bg-linen flex items-center justify-center px-4">
+      {/* Back button — top left */}
+      <Link
+        href="/"
+        className="fixed top-4 left-4 flex items-center gap-1.5 text-caption text-neutral-gray hover:text-forest-green transition-colors"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        หน้าหลัก
+      </Link>
+
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-h1 font-semibold text-forest-green">Greenergy</h1>

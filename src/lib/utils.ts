@@ -1,9 +1,14 @@
-export function formatThaiDate(dateStr: string) {
-  const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+export function formatDate(dateStr: string, lang: "th" | "en" = "th") {
+  const thMonths = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
     "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  const enMonths = ["January","February","March","April","May","June",
+    "July","August","September","October","November","December"];
   const [y, m, d] = dateStr.split("T")[0].split("-");
+  const months = lang === "en" ? enMonths : thMonths;
   return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
 }
+
+export const formatThaiDate = (dateStr: string) => formatDate(dateStr, "th");
 
 export function formatTime(timeStr: string) {
   return timeStr.slice(0, 5);
@@ -21,7 +26,7 @@ export function generateTimeSlots() {
 }
 
 export function validatePhone(phone: string) {
-  return /^0[0-9]{8,9}$/.test(phone.replace(/[-\s]/g, ""));
+  return /^0[0-9]{9}$/.test(phone.replace(/[-\s]/g, ""));
 }
 
 export function cn(...classes: (string | undefined | null | false)[]) {

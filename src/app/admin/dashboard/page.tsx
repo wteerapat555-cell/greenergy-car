@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { formatThaiDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useLang, T } from "@/lib/lang";
 import type { Booking, BookingStatus } from "@/types";
 
@@ -178,14 +178,14 @@ export default function DashboardPage() {
                   <td className="py-3 px-2 font-dm-sans font-semibold">{b.vehicles?.license_plate}</td>
                   <td className="py-3 px-2">{b.booker_name}</td>
                   <td className="py-3 px-2 font-dm-sans">
-                    {formatThaiDate(b.booking_date)}<br />
+                    {formatDate(b.booking_date, lang)}<br />
                     <span className="text-neutral-gray">
                       {b.booking_time?.slice(0, 5)}
                       {b.booking_time_end ? ` – ${b.booking_time_end.slice(0, 5)}` : ""}
                     </span>
                   </td>
                   <td className="py-3 px-2 max-w-[140px]">
-                    <span className="line-clamp-2">{(b as {destination?: string | null}).destination || "—"}</span>
+                    <span className="line-clamp-2">{b.destination || "—"}</span>
                   </td>
                   <td className="py-3 px-2">{b.parking_floor || "—"}</td>
                   <td className="py-3 px-2">

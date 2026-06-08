@@ -10,7 +10,7 @@ export async function POST(
   const body = await req.json();
   const { mileage_out, mileage_in, parking_floor, return_image_url } = body;
 
-  if (!mileage_out || !mileage_in || !parking_floor) {
+  if (mileage_out == null || mileage_in == null || !parking_floor) {
     return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบถ้วน" }, { status: 400 });
   }
   if (Number(mileage_in) <= Number(mileage_out)) {
