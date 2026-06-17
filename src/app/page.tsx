@@ -127,7 +127,7 @@ export default function HomePage() {
                 <div className="w-2 h-2 rounded-full bg-forest-green animate-pulse"/>
                 <span className="text-body font-semibold text-dark-text">{t.statusToday}</span>
               </div>
-              <Link href="/admin/login" className="text-caption text-moss-green hover:text-forest-green transition-colors flex items-center gap-1">
+              <Link href="/status" className="text-caption text-moss-green hover:text-forest-green transition-colors flex items-center gap-1">
                 {t.manage}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>

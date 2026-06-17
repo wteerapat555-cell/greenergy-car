@@ -8,7 +8,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatDate } from "@/lib/utils";
 import { useLang, T } from "@/lib/lang";
-import type { Booking, BookingStatus } from "@/types";
+import type { Booking, BookingStatus, Vehicle } from "@/types";
 
 type FilterType = "today" | "month" | "range";
 
@@ -31,6 +31,7 @@ export default function DashboardPage() {
   };
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("today");
   const [dateFrom, setDateFrom] = useState("");
@@ -54,10 +55,11 @@ export default function DashboardPage() {
         if (dateFrom) url += `from=${dateFrom}`;
         if (dateTo) url += `&to=${dateTo}`;
       }
-      const res = await fetch(url);
+      const [res, vRes] = await Promise.all([fetch(url), fetch("/api/vehicles")]);
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      const [data, vData] = await Promise.all([res.json(), vRes.json()]);
       setBookings(data.bookings || []);
+      setVehicles((vData.vehicles || []).filter((v: Vehicle) => v.is_active));
     } catch {
       toast.error(t.loadError);
     } finally {
@@ -116,6 +118,33 @@ export default function DashboardPage() {
   return (
     <AdminLayout>
       <h2 className="text-h1 font-semibold text-forest-green mb-6">{t.title}</h2>
+
+      {/* Car Wash Status */}
+      {vehicles.length > 0 && (
+        <div className="card mb-5">
+          <h3 className="text-caption font-semibold text-dark-text/60 uppercase tracking-wide mb-3">
+            {lang === "th" ? "สถานะการล้างรถ" : "Car Wash Status"}
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {vehicles.map((v) => {
+              const days = v.last_washed_at
+                ? Math.floor((Date.now() - new Date(v.last_washed_at).getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+              const alert = days === null || days >= 15;
+              return (
+                <div key={v.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-caption ${alert ? "border-orange-300 bg-orange-50" : "border-emerald-300 bg-emerald-50"}`}>
+                  <span className="font-dm-sans font-semibold text-dark-text">{v.license_plate}</span>
+                  <span className={alert ? "text-orange-600" : "text-emerald-700"}>
+                    {v.last_washed_at === null
+                      ? (lang === "th" ? "ยังไม่มีบันทึก ⚠" : "No record ⚠")
+                      : `${formatDate(v.last_washed_at.slice(0, 10), lang)}${alert ? " ⚠" : " ✓"}`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -205,22 +234,6 @@ export default function DashboardPage() {
                       <LoadingSpinner size={16} />
                     ) : (
                       <div className="flex gap-1 flex-wrap">
-                        {b.status === "pending" && (
-                          <button
-                            className="px-2 py-1 text-caption bg-forest-green text-white rounded hover:bg-moss-green transition-colors"
-                            onClick={() => setConfirm({ open: true, id: b.id, action: "confirmed" })}
-                          >
-                            {t.btnConfirm}
-                          </button>
-                        )}
-                        {(b.status === "pending" || b.status === "confirmed") && (
-                          <button
-                            className="px-2 py-1 text-caption bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                            onClick={() => setConfirm({ open: true, id: b.id, action: "cancelled" })}
-                          >
-                            {t.btnCancel}
-                          </button>
-                        )}
                         <button
                           className="px-2 py-1 text-caption bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
                           onClick={() => setConfirm({ open: true, id: b.id, action: "delete" })}

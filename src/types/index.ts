@@ -6,6 +6,7 @@ export interface Vehicle {
   image_url: string | null;
   is_active: boolean;
   created_at: string;
+  last_washed_at: string | null;
 }
 
 export interface Booking {
@@ -21,6 +22,7 @@ export interface Booking {
   status: BookingStatus;
   mileage_out: number | null;
   mileage_in: number | null;
+  fuel_level_return: number | null;
   return_image_url: string | null;
   created_at: string;
   returned_at: string | null;

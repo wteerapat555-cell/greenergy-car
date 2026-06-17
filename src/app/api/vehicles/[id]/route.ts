@@ -3,6 +3,30 @@ import { supabaseAdmin, isSupabaseReady } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth";
 import * as local from "@/lib/localDb";
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await req.json();
+
+  if (body.action === "washed") {
+    const washedAt = body.date ? new Date(body.date).toISOString() : new Date().toISOString();
+    if (!isSupabaseReady()) {
+      const ok = local.markVehicleWashed(id, washedAt);
+      if (!ok) return NextResponse.json({ error: "ไม่พบรถ" }, { status: 404 });
+      return NextResponse.json({ ok: true });
+    }
+    const db = supabaseAdmin();
+    const { error } = await db.from("vehicles")
+      .update({ last_washed_at: washedAt }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "action ไม่ถูกต้อง" }, { status: 400 });
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

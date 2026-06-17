@@ -10,6 +10,7 @@ interface Vehicle {
   image_url: string | null;
   is_active: boolean;
   created_at: string;
+  last_washed_at: string | null;
 }
 
 interface Booking {
@@ -25,6 +26,7 @@ interface Booking {
   status: string;
   mileage_out: number | null;
   mileage_in: number | null;
+  fuel_level_return: number | null;
   return_image_url: string | null;
   created_at: string;
   returned_at: string | null;
@@ -69,6 +71,15 @@ export function getAvailableVehicles(date: string): Vehicle[] {
   return db.vehicles.filter((v) => v.is_active && !busyIds.includes(v.id));
 }
 
+export function markVehicleWashed(id: string, washedAt?: string): boolean {
+  const db = read();
+  const v = db.vehicles.find((v) => v.id === id);
+  if (!v) return false;
+  v.last_washed_at = washedAt ?? new Date().toISOString();
+  write(db);
+  return true;
+}
+
 export function addVehicle(license_plate: string, image_url: string | null): Vehicle {
   const db = read();
   const v: Vehicle = {
@@ -77,6 +88,7 @@ export function addVehicle(license_plate: string, image_url: string | null): Veh
     image_url,
     is_active: true,
     created_at: new Date().toISOString(),
+    last_washed_at: null,
   };
   db.vehicles.push(v);
   write(db);
@@ -146,7 +158,7 @@ export function checkDoubleBooking(
 export function addBooking(data: {
   vehicle_id: string; booking_date: string; booking_time: string;
   booking_time_end?: string; booker_name: string; booker_phone: string;
-  destination?: string;
+  destination?: string; status?: string;
 }): BookingWithVehicle {
   const db = read();
   const b: Booking = {
@@ -155,9 +167,10 @@ export function addBooking(data: {
     booking_time_end: data.booking_time_end || null,
     destination: data.destination || null,
     parking_floor: null,
-    status: "pending",
+    status: data.status || "confirmed",
     mileage_out: null,
     mileage_in: null,
+    fuel_level_return: null,
     return_image_url: null,
     created_at: new Date().toISOString(),
     returned_at: null,
@@ -185,8 +198,16 @@ export function updateBookingStatus(id: string, status: string): BookingWithVehi
   return attachVehicle(b, db.vehicles);
 }
 
+export function getLastReturnedMileage(vehicle_id: string): number | null {
+  const db = read();
+  const returned = db.bookings
+    .filter((b) => b.vehicle_id === vehicle_id && b.status === "returned" && b.mileage_in != null)
+    .sort((a, b) => (b.returned_at || "").localeCompare(a.returned_at || ""));
+  return returned.length > 0 ? returned[0].mileage_in : null;
+}
+
 export function returnBooking(id: string, data: {
-  mileage_out: number; mileage_in: number; parking_floor: string; return_image_url: string;
+  mileage_out: number; mileage_in: number; fuel_level_return?: number; parking_floor: string; return_image_url: string;
 }): { booking: BookingWithVehicle | null; error?: string } {
   const db = read();
   const b = db.bookings.find((b) => b.id === id);
@@ -194,7 +215,13 @@ export function returnBooking(id: string, data: {
   if (!["pending", "confirmed"].includes(b.status)) {
     return { booking: null, error: "ไม่สามารถคืนรถได้ เนื่องจากสถานะการจองไม่ถูกต้อง" };
   }
-  Object.assign(b, { ...data, status: "returned", returned_at: new Date().toISOString() });
+  Object.assign(b, {
+    ...data,
+    fuel_level_return: data.fuel_level_return ?? null,
+    return_image_url: data.return_image_url || null, // normalize empty string → null
+    status: "returned",
+    returned_at: new Date().toISOString(),
+  });
   write(db);
   return { booking: attachVehicle(b, db.vehicles) };
 }

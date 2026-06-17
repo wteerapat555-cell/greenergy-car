@@ -8,7 +8,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const { mileage_out, mileage_in, parking_floor, return_image_url } = body;
+  const { mileage_out, mileage_in, fuel_level_return, parking_floor, return_image_url } = body;
 
   if (mileage_out == null || mileage_in == null || !parking_floor) {
     return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบถ้วน" }, { status: 400 });
@@ -21,6 +21,7 @@ export async function POST(
     const result = local.returnBooking(id, {
       mileage_out: Number(mileage_out),
       mileage_in: Number(mileage_in),
+      fuel_level_return: fuel_level_return != null ? Number(fuel_level_return) : undefined,
       parking_floor,
       return_image_url,
     });
@@ -42,6 +43,7 @@ export async function POST(
     .from("bookings")
     .update({
       mileage_out: Number(mileage_out), mileage_in: Number(mileage_in),
+      fuel_level_return: fuel_level_return != null ? Number(fuel_level_return) : null,
       parking_floor, return_image_url, status: "returned",
       returned_at: new Date().toISOString(),
     })
