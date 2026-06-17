@@ -20,10 +20,12 @@ export async function GET(req: NextRequest) {
   if (all !== "true") query = query.eq("is_active", true);
 
   if (available === "true") {
-    const { data: busyIds } = await db
+    // ดึง vehicle_id ที่มี booking active วันนี้ (pending หรือ confirmed)
+    const { data: busyData } = await db
       .from("bookings").select("vehicle_id")
-      .in("status", ["pending", "confirmed"]).eq("booking_date", today);
-    const ids = (busyIds || []).map((b) => b.vehicle_id);
+      .in("status", ["pending", "confirmed"])
+      .eq("booking_date", today);
+    const ids = [...new Set((busyData || []).map((b: { vehicle_id: string }) => b.vehicle_id))];
     if (ids.length > 0) query = query.not("id", "in", `(${ids.join(",")})`);
   }
 
