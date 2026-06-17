@@ -29,7 +29,7 @@ export default function OutboundBookingPage() {
     booking_time_end: "09:00",
     booker_name: "",
     booker_phone: "",
-    destination: "",
+    purpose: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -41,8 +41,18 @@ export default function OutboundBookingPage() {
       .then((data) => setVehicles(data.vehicles || []))
       .catch(() => toast.error(t.loadError))
       .finally(() => setLoadingVehicles(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function getCurrentThaiTime(): string {
+    const nowUTC = new Date();
+    const thaiOffset = 7 * 60;
+    const thaiTime = new Date(nowUTC.getTime() + thaiOffset * 60 * 1000);
+    const h = thaiTime.getUTCHours();
+    const m = thaiTime.getUTCMinutes();
+    const roundedM = m >= 30 ? 30 : 0;
+    return String(h).padStart(2, "0") + ":" + String(roundedM).padStart(2, "0");
+  }
 
   function validateStep1() {
     if (!form.vehicle_id) { setErrors({ vehicle_id: t.errSelectVehicle }); return false; }
@@ -66,7 +76,7 @@ export default function OutboundBookingPage() {
     if (!form.booker_name.trim()) errs.booker_name = t.errName;
     if (!form.booker_phone.trim()) errs.booker_phone = t.errPhone;
     else if (!validatePhone(form.booker_phone)) errs.booker_phone = t.errPhoneInvalid;
-    if (!form.destination.trim()) errs.destination = t.errDest;
+    if (!form.purpose.trim()) errs.purpose = t.errDest;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -97,8 +107,12 @@ export default function OutboundBookingPage() {
     }
   }
 
-  const timeSlots = generateTimeSlots();
-  const endTimeSlots = timeSlots.filter((t) => t > form.booking_time);
+  const allTimeSlots = generateTimeSlots();
+  const currentThaiTime = getCurrentThaiTime();
+  const timeSlots = form.booking_date === today
+    ? allTimeSlots.filter((slot) => slot >= currentThaiTime)
+    : allTimeSlots;
+  const endTimeSlots = allTimeSlots.filter((slot) => slot > form.booking_time);
 
   return (
     <main className="min-h-screen bg-linen px-4 py-8">
@@ -110,157 +124,122 @@ export default function OutboundBookingPage() {
           </div>
           <LangToggle />
         </div>
-
         <Stepper steps={[...t.steps]} currentStep={step} />
-
         <div className="card">
-          {/* Step 1 */}
           {step === 1 && (
             <div>
               <h2 className="text-h2 font-semibold mb-4">{t.step1Title}</h2>
-              {loadingVehicles ? (
-                <div className="flex justify-center py-8"><LoadingSpinner /></div>
-              ) : vehicles.length === 0 ? (
-                <p className="text-body text-neutral-gray text-center py-8">{t.noVehicle}</p>
+              {loadingVehicles ? <LoadingSpinner /> : vehicles.length === 0 ? (
+                <p className="text-neutral-gray text-center py-8">{t.noVehicle}</p>
               ) : (
                 <div className="space-y-3">
                   {vehicles.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => setForm((f) => ({ ...f, vehicle_id: v.id }))}
-                      className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left ${
-                        form.vehicle_id === v.id ? "border-forest-green bg-forest-green/5" : "border-neutral-gray hover:border-moss-green"
-                      }`}
-                    >
-                      {v.image_url ? (
-                        <Image src={v.image_url} alt={v.license_plate} width={64} height={48} className="rounded object-cover" />
-                      ) : (
-                        <div className="w-16 h-12 bg-linen rounded flex items-center justify-center">
-                          <span className="text-neutral-gray text-caption">{t.noImage}</span>
-                        </div>
-                      )}
-                      <span className="text-body font-semibold font-dm-sans">{v.license_plate}</span>
+                    <button key={v.id} onClick={() => setForm((f) => ({ ...f, vehicle_id: v.id }))}
+                      className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${form.vehicle_id === v.id ? "border-forest-green bg-forest-green/5" : "border-gray-200 hover:border-forest-green/50"}`}>
+                      <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {v.image_url ? <Image src={v.image_url} alt={v.license_plate} width={64} height={64} className="object-cover w-full h-full" /> : <span className="text-xs text-gray-400">{t.noImage}</span>}
+                      </div>
+                      <span className="font-semibold text-dark-text">{v.license_plate}</span>
                       {form.vehicle_id === v.id && <span className="ml-auto text-forest-green">✓</span>}
                     </button>
                   ))}
                 </div>
               )}
-              {errors.vehicle_id && <p className="text-red-600 text-caption mt-2">{errors.vehicle_id}</p>}
+              {errors.vehicle_id && <p className="text-red-500 text-sm mt-2">{errors.vehicle_id}</p>}
+              <div className="flex justify-end mt-6"><button onClick={nextStep} className="btn-primary">{t.btnNext}</button></div>
             </div>
           )}
-
-          {/* Step 2 */}
           {step === 2 && (
             <div>
               <h2 className="text-h2 font-semibold mb-4">{t.step2Title}</h2>
               <div className="space-y-4">
                 <div>
                   <label className="label">{t.labelDate}</label>
-                  <input type="date" className="input-field font-dm-sans" min={today} value={form.booking_date}
-                    onChange={(e) => setForm((f) => ({ ...f, booking_date: e.target.value }))} />
-                  {errors.booking_date && <p className="text-red-600 text-caption mt-1">{errors.booking_date}</p>}
+                  <input type="date" min={today} value={form.booking_date}
+                    onChange={(e) => { setForm((f) => ({ ...f, booking_date: e.target.value })); setErrors((err) => ({ ...err, booking_date: "" })); }}
+                    className="input" />
+                  {errors.booking_date && <p className="text-red-500 text-sm mt-1">{errors.booking_date}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label">{t.labelStart}</label>
-                    <select className="input-field font-dm-sans" value={form.booking_time}
-                      onChange={(e) => {
-                        const newStart = e.target.value;
-                        const newEnd = timeSlots.find((s) => s > newStart) || "";
-                        setForm((f) => ({ ...f, booking_time: newStart, booking_time_end: newEnd }));
-                      }}>
-                      {timeSlots.slice(0, -1).map((s) => <option key={s} value={s}>{s}</option>)}
+                    <select value={form.booking_time}
+                      onChange={(e) => { const s = e.target.value; const end = allTimeSlots.find((x) => x > s) || ""; setForm((f) => ({ ...f, booking_time: s, booking_time_end: end })); setErrors((err) => ({ ...err, booking_time: "", booking_time_end: "" })); }}
+                      className="input">
+                      {timeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
                     </select>
-                    {errors.booking_time && <p className="text-red-600 text-caption mt-1">{errors.booking_time}</p>}
+                    {errors.booking_time && <p className="text-red-500 text-sm mt-1">{errors.booking_time}</p>}
                   </div>
                   <div>
                     <label className="label">{t.labelEnd}</label>
-                    <select className="input-field font-dm-sans" value={form.booking_time_end}
-                      onChange={(e) => setForm((f) => ({ ...f, booking_time_end: e.target.value }))}>
-                      {endTimeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                    <select value={form.booking_time_end}
+                      onChange={(e) => { setForm((f) => ({ ...f, booking_time_end: e.target.value })); setErrors((err) => ({ ...err, booking_time_end: "" })); }}
+                      className="input">
+                      {endTimeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
                     </select>
-                    {errors.booking_time_end && <p className="text-red-600 text-caption mt-1">{errors.booking_time_end}</p>}
+                    {errors.booking_time_end && <p className="text-red-500 text-sm mt-1">{errors.booking_time_end}</p>}
                   </div>
                 </div>
-                {form.booking_time && form.booking_time_end && (
-                  <p className="text-caption text-moss-green bg-forest-green/5 rounded-lg px-3 py-2">
-                    {t.duration}: {form.booking_time} – {form.booking_time_end}{t.timeUnit ? ` ${t.timeUnit}` : ""}
-                  </p>
+                {form.booking_time && form.booking_time_end && form.booking_time_end > form.booking_time && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-neutral-gray">{t.duration}: {form.booking_time} – {form.booking_time_end} {t.durationUnit}</div>
                 )}
+              </div>
+              <div className="flex justify-between mt-6">
+                <button onClick={() => setStep(1)} className="btn-secondary">{t.btnBack}</button>
+                <button onClick={nextStep} className="btn-primary">{t.btnNext}</button>
               </div>
             </div>
           )}
-
-          {/* Step 3 */}
           {step === 3 && (
             <div>
               <h2 className="text-h2 font-semibold mb-4">{t.step3Title}</h2>
               <div className="space-y-4">
                 <div>
                   <label className="label">{t.labelName}</label>
-                  <input type="text" className="input-field" placeholder={t.placeholderName} value={form.booker_name}
-                    onChange={(e) => setForm((f) => ({ ...f, booker_name: e.target.value }))} />
-                  {errors.booker_name && <p className="text-red-600 text-caption mt-1">{errors.booker_name}</p>}
+                  <input type="text" placeholder={t.placeholderName} value={form.booker_name}
+                    onChange={(e) => { setForm((f) => ({ ...f, booker_name: e.target.value })); setErrors((err) => ({ ...err, booker_name: "" })); }}
+                    className="input" />
+                  {errors.booker_name && <p className="text-red-500 text-sm mt-1">{errors.booker_name}</p>}
                 </div>
                 <div>
                   <label className="label">{t.labelPhone}</label>
-                  <input type="tel" className="input-field font-dm-sans" placeholder="0812345678" value={form.booker_phone}
-                    onChange={(e) => setForm((f) => ({ ...f, booker_phone: e.target.value }))} />
-                  {errors.booker_phone && <p className="text-red-600 text-caption mt-1">{errors.booker_phone}</p>}
+                  <input type="tel" placeholder="0812345678" value={form.booker_phone}
+                    onChange={(e) => { setForm((f) => ({ ...f, booker_phone: e.target.value })); setErrors((err) => ({ ...err, booker_phone: "" })); }}
+                    className="input" />
+                  {errors.booker_phone && <p className="text-red-500 text-sm mt-1">{errors.booker_phone}</p>}
                 </div>
                 <div>
                   <label className="label">{t.labelDest}</label>
-                  <input type="text" className="input-field" placeholder={t.placeholderDest} value={form.destination}
-                    onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))} />
-                  {errors.destination && <p className="text-red-600 text-caption mt-1">{errors.destination}</p>}
+                  <input type="text" placeholder={t.placeholderDest} value={form.purpose}
+                    onChange={(e) => { setForm((f) => ({ ...f, purpose: e.target.value })); setErrors((err) => ({ ...err, purpose: "" })); }}
+                    className="input" />
+                  {errors.purpose && <p className="text-red-500 text-sm mt-1">{errors.purpose}</p>}
                 </div>
+              </div>
+              <div className="flex justify-between mt-6">
+                <button onClick={() => setStep(2)} className="btn-secondary">{t.btnBack}</button>
+                <button onClick={nextStep} className="btn-primary">{t.btnNext}</button>
               </div>
             </div>
           )}
-
-          {/* Step 4 */}
           {step === 4 && (
             <div>
               <h2 className="text-h2 font-semibold mb-4">{t.step4Title}</h2>
-              <div className="space-y-3 bg-linen rounded-lg p-4 mb-6">
-                {selectedVehicle?.image_url && (
-                  <Image src={selectedVehicle.image_url} alt={selectedVehicle.license_plate} width={320} height={200}
-                    className="w-full h-40 object-cover rounded-lg mb-4" />
-                )}
-                <Row label={t.rowPlate} value={selectedVehicle?.license_plate || "-"} mono />
-                <Row label={t.rowDate} value={formatDate(form.booking_date, lang)} />
-                <Row label={t.rowTime} value={`${form.booking_time} – ${form.booking_time_end}${t.timeUnit ? ` ${t.timeUnit}` : ""}`} mono />
-                <Row label={t.rowName} value={form.booker_name} />
-                <Row label={t.rowPhone} value={form.booker_phone} mono />
-                <Row label={t.rowDest} value={form.destination} />
+              <div className="bg-gray-50 rounded-xl divide-y divide-gray-200">
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowPlate}</span><span className="font-semibold">{selectedVehicle?.license_plate}</span></div>
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowDate}</span><span className="font-semibold">{formatDate(form.booking_date, lang)}</span></div>
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowTime}</span><span className="font-semibold">{form.booking_time} – {form.booking_time_end} {t.timeUnit}</span></div>
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowName}</span><span className="font-semibold">{form.booker_name}</span></div>
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowPhone}</span><span className="font-semibold">{form.booker_phone}</span></div>
+                <div className="flex justify-between px-4 py-3"><span className="text-neutral-gray">{t.rowDest}</span><span className="font-semibold">{form.purpose}</span></div>
               </div>
-              <button className="btn-primary w-full" onClick={handleSubmit} disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2"><LoadingSpinner size={20} /> {t.btnSaving}</span>
-                ) : t.btnConfirm}
+              <button onClick={handleSubmit} disabled={loading} className="btn-primary w-full mt-6">
+                {loading ? t.btnSaving : t.btnConfirm}
               </button>
-            </div>
-          )}
-
-          {step < 4 && (
-            <div className="flex justify-between mt-6">
-              {step > 1 ? (
-                <button className="btn-secondary" onClick={() => setStep((s) => s - 1)}>{t.btnBack}</button>
-              ) : <div />}
-              <button className="btn-primary" onClick={nextStep}>{t.btnNext}</button>
             </div>
           )}
         </div>
       </div>
     </main>
   );
-}
-
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between items-center py-1.5 border-b border-neutral-gray/50 last:border-0">
-      <span className="text-caption text-dark-text/60">{label}</span>
-      <span className={`text-body font-semibold ${mono ? "font-dm-sans" : ""}`}>{value}</span>
-    </div>
-  );
-}
+                                       }
