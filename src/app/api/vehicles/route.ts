@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       .from("bookings").select("vehicle_id")
       .in("status", ["pending", "confirmed"])
       .eq("booking_date", today);
-    const ids = [...new Set((busyData || []).map((b: { vehicle_id: string }) => b.vehicle_id))];
+    const ids = Array.from(new Set((busyData || []).map((b: { vehicle_id: string }) => b.vehicle_id)));
     if (ids.length > 0) query = query.not("id", "in", `(${ids.join(",")})`);
   }
 
