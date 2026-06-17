@@ -49,7 +49,7 @@ export default function ReturnPage() {
       mileage_out: selectedBooking.mileage_out != null ? String(selectedBooking.mileage_out) : f.mileage_out,
       parking_floor: selectedBooking.parking_floor || f.parking_floor,
     }));
-    // Clear booking_id error when user selects a booking
+    // FIX: Clear booking_id error when user selects a booking
     setErrors((e) => ({ ...e, booking_id: "" }));
   }, [selectedBooking]);
 
@@ -132,7 +132,6 @@ export default function ReturnPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-6">
-          {/* เลือกทะเบียนรถ */}
           <div>
             <label className="label">{t.labelVehicle}</label>
             {loadingBookings ? (
@@ -142,6 +141,7 @@ export default function ReturnPage() {
                 value={form.booking_id}
                 onChange={(e) => {
                   setForm((f) => ({ ...f, booking_id: e.target.value }));
+                  // FIX: Clear error real-time on change
                   setErrors((err) => ({ ...err, booking_id: "" }));
                 }}
                 className="input"
@@ -156,52 +156,42 @@ export default function ReturnPage() {
             )}
             {errors.booking_id && <p className="text-red-500 text-sm mt-1">{errors.booking_id}</p>}
 
-            {/* แสดงข้อมูลการจอง */}
             {selectedBooking && (
               <div className="mt-3 bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-neutral-gray">{t.booker}</span><span>{selectedBooking.booker_name}</span></div>
                 <div className="flex justify-between"><span className="text-neutral-gray">{t.bookingDate}</span><span>{formatDate(selectedBooking.booking_date, lang)}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-gray">{t.time}</span><span>{selectedBooking.booking_time?.slice(0,5)}{selectedBooking.booking_time_end ? ` – ${selectedBooking.booking_time_end.slice(0,5)}` : ""}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-gray">{t.status}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{t.statusConfirmed}</span>
-                </div>
+                <div className="flex justify-between"><span className="text-neutral-gray">{t.time}</span><span>{selectedBooking.booking_time?.slice(0,5)}{selectedBooking.booking_time_end ? ` – ${selectedBooking.booking_time_end.slice(0,5)}` : ""} {t.timeUnit}</span></div>
+                <div className="flex justify-between items-center"><span className="text-neutral-gray">{t.status}</span><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{t.confirmed}</span></div>
               </div>
             )}
           </div>
 
-          {/* เลขไมล์ขาไป */}
           <div>
             <label className="label">{t.labelMileOut}</label>
             <input
               type="number"
-              min={0}
               placeholder={t.placeholderMileOut}
               value={form.mileage_out}
               onChange={(e) => {
                 setForm((f) => ({ ...f, mileage_out: e.target.value }));
+                // FIX: Clear error real-time
                 setErrors((err) => ({ ...err, mileage_out: "" }));
-                // Also clear mileage_in error if it's now valid
-                if (form.mileage_in && Number(form.mileage_in) > Number(e.target.value)) {
-                  setErrors((err) => ({ ...err, mileage_in: "" }));
-                }
               }}
               className="input"
             />
             {errors.mileage_out && <p className="text-red-500 text-sm mt-1">{errors.mileage_out}</p>}
           </div>
 
-          {/* เลขไมล์ขากลับ */}
           <div>
             <label className="label">{t.labelMileIn}</label>
             <input
               type="number"
-              min={0}
               placeholder={t.placeholderMileIn}
               value={form.mileage_in}
               onChange={(e) => {
                 const val = e.target.value;
                 setForm((f) => ({ ...f, mileage_in: val }));
-                // Clear error real-time when value is valid
+                // FIX: Clear error real-time when valid, show when invalid
                 if (val === "" || (form.mileage_out !== "" && Number(val) > Number(form.mileage_out))) {
                   setErrors((err) => ({ ...err, mileage_in: "" }));
                 } else if (val !== "" && form.mileage_out !== "" && Number(val) <= Number(form.mileage_out)) {
@@ -216,7 +206,6 @@ export default function ReturnPage() {
             )}
           </div>
 
-          {/* ชั้นที่จอดรถ */}
           <div>
             <label className="label">{t.labelParking}</label>
             <input
@@ -225,6 +214,7 @@ export default function ReturnPage() {
               value={form.parking_floor}
               onChange={(e) => {
                 setForm((f) => ({ ...f, parking_floor: e.target.value }));
+                // FIX: Clear error real-time
                 setErrors((err) => ({ ...err, parking_floor: "" }));
               }}
               className="input"
@@ -232,7 +222,6 @@ export default function ReturnPage() {
             {errors.parking_floor && <p className="text-red-500 text-sm mt-1">{errors.parking_floor}</p>}
           </div>
 
-          {/* ภาพรถ */}
           <div>
             <label className="label">{t.labelImage}</label>
             <div
@@ -265,4 +254,4 @@ export default function ReturnPage() {
       </div>
     </main>
   );
-            }
+                }
