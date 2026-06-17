@@ -7,11 +7,12 @@ create extension if not exists "pgcrypto";
 
 -- vehicles
 create table if not exists vehicles (
-  id            uuid primary key default gen_random_uuid(),
-  license_plate text not null unique,
-  image_url     text,
-  is_active     boolean not null default true,
-  created_at    timestamptz not null default now()
+  id             uuid primary key default gen_random_uuid(),
+  license_plate  text not null unique,
+  image_url      text,
+  is_active      boolean not null default true,
+  created_at     timestamptz not null default now(),
+  last_washed_at timestamptz
 );
 
 -- bookings
@@ -26,11 +27,13 @@ create table if not exists bookings (
   parking_floor    text,
   status           text not null default 'pending'
                    check (status in ('pending','confirmed','returned','cancelled')),
-  mileage_out      integer,
-  mileage_in       integer,
-  return_image_url text,
-  created_at       timestamptz not null default now(),
-  returned_at      timestamptz
+  mileage_out       integer,
+  mileage_in        integer,
+  fuel_level_return integer,
+  return_image_url  text,
+  destination       text,
+  created_at        timestamptz not null default now(),
+  returned_at       timestamptz
 );
 
 create index if not exists idx_bookings_date    on bookings(booking_date);
