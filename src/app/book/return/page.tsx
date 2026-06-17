@@ -39,7 +39,7 @@ export default function ReturnPage() {
       .then((data) => setBookings(data.bookings || []))
       .catch(() => toast.error(t.loadError))
       .finally(() => setLoadingBookings(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -49,6 +49,8 @@ export default function ReturnPage() {
       mileage_out: selectedBooking.mileage_out != null ? String(selectedBooking.mileage_out) : f.mileage_out,
       parking_floor: selectedBooking.parking_floor || f.parking_floor,
     }));
+    // Clear booking_id error when user selects a booking
+    setErrors((e) => ({ ...e, booking_id: "" }));
   }, [selectedBooking]);
 
   async function handleImageUpload(file: File) {
@@ -129,22 +131,22 @@ export default function ReturnPage() {
           <LangToggle />
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-5">
-          {/* Vehicle select */}
+        <form onSubmit={handleSubmit} className="card space-y-6">
+          {/* เลือกทะเบียนรถ */}
           <div>
-            <label className="label">{t.labelPlate}</label>
+            <label className="label">{t.labelVehicle}</label>
             {loadingBookings ? (
-              <div className="flex items-center gap-2 text-neutral-gray">
-                <LoadingSpinner size={16} /> {t.loading}
-              </div>
-            ) : bookings.length === 0 ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-caption text-yellow-800">
-                {t.noBookings}
-              </div>
+              <LoadingSpinner />
             ) : (
-              <select className="input-field font-dm-sans" value={form.booking_id}
-                onChange={(e) => setForm((f) => ({ ...f, booking_id: e.target.value, mileage_out: "", mileage_in: "", parking_floor: "" }))}>
-                <option value="">{t.selectPlate}</option>
+              <select
+                value={form.booking_id}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, booking_id: e.target.value }));
+                  setErrors((err) => ({ ...err, booking_id: "" }));
+                }}
+                className="input"
+              >
+                <option value="">— {t.selectVehicle} —</option>
                 {bookings.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.vehicles?.license_plate} — {b.booker_name} ({formatDate(b.booking_date, lang)})
@@ -152,111 +154,115 @@ export default function ReturnPage() {
                 ))}
               </select>
             )}
-            {errors.booking_id && <p className="text-red-600 text-caption mt-1">{errors.booking_id}</p>}
-          </div>
+            {errors.booking_id && <p className="text-red-500 text-sm mt-1">{errors.booking_id}</p>}
 
-          {/* Booking info */}
-          {selectedBooking && (
-            <div className="bg-linen rounded-lg p-3 border border-neutral-gray/30 text-caption space-y-1">
-              <div className="flex justify-between">
-                <span className="text-dark-text/60">{t.infoBooker}</span>
-                <span className="font-semibold">{selectedBooking.booker_name}</span>
+            {/* แสดงข้อมูลการจอง */}
+            {selectedBooking && (
+              <div className="mt-3 bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                <div className="flex justify-between"><span className="text-neutral-gray">{t.booker}</span><span>{selectedBooking.booker_name}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-gray">{t.bookingDate}</span><span>{formatDate(selectedBooking.booking_date, lang)}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-gray">{t.time}</span><span>{selectedBooking.booking_time?.slice(0,5)}{selectedBooking.booking_time_end ? ` – ${selectedBooking.booking_time_end.slice(0,5)}` : ""}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-gray">{t.status}</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{t.statusConfirmed}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-dark-text/60">{t.infoDate}</span>
-                <span className="font-dm-sans">{formatDate(selectedBooking.booking_date, lang)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-dark-text/60">{t.infoTime}</span>
-                <span className="font-dm-sans">
-                  {selectedBooking.booking_time?.slice(0, 5)}
-                  {selectedBooking.booking_time_end ? ` – ${selectedBooking.booking_time_end.slice(0, 5)}${t.timeUnit ? ` ${t.timeUnit}` : ""}` : (t.timeUnit ? ` ${t.timeUnit}` : "")}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-dark-text/60">{t.infoStatus}</span>
-                <span className={`px-2 py-0.5 rounded-full text-caption ${
-                  selectedBooking.status === "confirmed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                }`}>
-                  {selectedBooking.status === "confirmed" ? t.statusConfirmed : t.statusPending}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Mileage out */}
-          <div>
-            <label className="label">
-              {t.labelMileOut}
-              {selectedBooking?.mileage_out != null && (
-                <span className="text-moss-green text-caption ml-2">({t.mileOutSaved} {selectedBooking.mileage_out.toLocaleString()})</span>
-              )}
-            </label>
-            <input type="number" className="input-field font-dm-sans" placeholder={t.placeholderMileOut}
-              value={form.mileage_out} onChange={(e) => setForm((f) => ({ ...f, mileage_out: e.target.value }))} />
-            {errors.mileage_out && <p className="text-red-600 text-caption mt-1">{errors.mileage_out}</p>}
-          </div>
-
-          {/* Mileage in */}
-          <div>
-            <label className="label">{t.labelMileIn}</label>
-            <input type="number" className="input-field font-dm-sans" placeholder={t.placeholderMileIn}
-              value={form.mileage_in} onChange={(e) => setForm((f) => ({ ...f, mileage_in: e.target.value }))} />
-            {errors.mileage_in && <p className="text-red-600 text-caption mt-1">{errors.mileage_in}</p>}
-            {mileageDiff !== null && (
-              <p className="text-caption text-moss-green mt-1 bg-forest-green/5 rounded px-2 py-1">
-                {t.mileUsed}: {mileageDiff.toLocaleString()} {t.mileUnit}
-              </p>
             )}
           </div>
 
-          {/* Parking */}
+          {/* เลขไมล์ขาไป */}
           <div>
-            <label className="label">{t.labelParking}</label>
-            <input type="text" className="input-field" placeholder={t.placeholderParking}
-              value={form.parking_floor} onChange={(e) => setForm((f) => ({ ...f, parking_floor: e.target.value }))} />
-            {errors.parking_floor && <p className="text-red-600 text-caption mt-1">{errors.parking_floor}</p>}
+            <label className="label">{t.labelMileOut}</label>
+            <input
+              type="number"
+              min={0}
+              placeholder={t.placeholderMileOut}
+              value={form.mileage_out}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, mileage_out: e.target.value }));
+                setErrors((err) => ({ ...err, mileage_out: "" }));
+                // Also clear mileage_in error if it's now valid
+                if (form.mileage_in && Number(form.mileage_in) > Number(e.target.value)) {
+                  setErrors((err) => ({ ...err, mileage_in: "" }));
+                }
+              }}
+              className="input"
+            />
+            {errors.mileage_out && <p className="text-red-500 text-sm mt-1">{errors.mileage_out}</p>}
           </div>
 
-          {/* Image upload */}
+          {/* เลขไมล์ขากลับ */}
+          <div>
+            <label className="label">{t.labelMileIn}</label>
+            <input
+              type="number"
+              min={0}
+              placeholder={t.placeholderMileIn}
+              value={form.mileage_in}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => ({ ...f, mileage_in: val }));
+                // Clear error real-time when value is valid
+                if (val === "" || (form.mileage_out !== "" && Number(val) > Number(form.mileage_out))) {
+                  setErrors((err) => ({ ...err, mileage_in: "" }));
+                } else if (val !== "" && form.mileage_out !== "" && Number(val) <= Number(form.mileage_out)) {
+                  setErrors((err) => ({ ...err, mileage_in: t.errMileInLow }));
+                }
+              }}
+              className="input"
+            />
+            {errors.mileage_in && <p className="text-red-500 text-sm mt-1">{errors.mileage_in}</p>}
+            {mileageDiff !== null && (
+              <p className="text-sm text-neutral-gray mt-1">{t.distanceUsed}: {mileageDiff} {t.kmUnit}</p>
+            )}
+          </div>
+
+          {/* ชั้นที่จอดรถ */}
+          <div>
+            <label className="label">{t.labelParking}</label>
+            <input
+              type="text"
+              placeholder={t.placeholderParking}
+              value={form.parking_floor}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, parking_floor: e.target.value }));
+                setErrors((err) => ({ ...err, parking_floor: "" }));
+              }}
+              className="input"
+            />
+            {errors.parking_floor && <p className="text-red-500 text-sm mt-1">{errors.parking_floor}</p>}
+          </div>
+
+          {/* ภาพรถ */}
           <div>
             <label className="label">{t.labelImage}</label>
             <div
-              className="border-2 border-dashed border-neutral-gray rounded-lg p-6 text-center cursor-pointer hover:border-forest-green transition-colors"
-              onClick={() => !uploading && fileRef.current?.click()}
+              onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file) handleImageUpload(file); }}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageUpload(f); }}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-forest-green transition-colors"
             >
-              {uploading ? (
-                <div className="flex items-center justify-center gap-2 text-neutral-gray">
-                  <LoadingSpinner size={20} /> {t.uploading}
-                </div>
-              ) : preview ? (
-                <div>
-                  <Image src={preview} alt="preview" width={320} height={200} className="mx-auto rounded-lg object-cover max-h-48" />
-                  <p className="text-caption text-moss-green mt-2">{t.changeImage}</p>
+              {preview ? (
+                <div className="relative">
+                  <Image src={preview} alt="preview" width={200} height={150} className="mx-auto rounded-lg object-cover max-h-40" />
+                  {uploading && <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg"><LoadingSpinner /></div>}
                 </div>
               ) : (
-                <div>
-                  <p className="text-body text-neutral-gray">{t.uploadClick}</p>
-                  <p className="text-caption text-neutral-gray mt-1">{t.uploadHint}</p>
+                <div className="text-neutral-gray">
+                  <p>{t.imagePlaceholder}</p>
+                  <p className="text-xs mt-1">JPG / PNG {t.maxSize}</p>
                 </div>
               )}
             </div>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
-            {errors.image && <p className="text-red-600 text-caption mt-1">{errors.image}</p>}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }} />
+            {errors.image && <p className="text-red-500 text-sm mt-1">{errors.image}</p>}
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={loading || uploading}>
-            {loading ? (
-              <span className="flex items-center justify-center gap-2"><LoadingSpinner size={20} /> {t.btnSaving}</span>
-            ) : uploading ? (
-              <span className="flex items-center justify-center gap-2"><LoadingSpinner size={20} /> {t.btnWaitUpload}</span>
-            ) : t.btnSubmit}
+          <button type="submit" disabled={loading || uploading} className="btn-primary w-full">
+            {loading ? t.btnSaving : t.btnSubmit}
           </button>
         </form>
       </div>
     </main>
   );
-}
+            }
